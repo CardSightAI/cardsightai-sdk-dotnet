@@ -16,7 +16,7 @@
     <Company>CardSight AI</Company>
     <Product>CardSight AI .NET SDK</Product>
     <Description>Official .NET SDK for CardSight AI — AI-powered trading card identification from images, catalog search, pricing, marketplace and graded population data, and collection management. 12M+ cards across sports (baseball, football, basketball) and trading card games (Pokémon, Magic, Yu-Gi-Oh!). Strongly-typed, DI-ready, and well-suited to both production apps and AI agents. Free tier available.</Description>
-    <Copyright>Copyright © CardSight AI 2025-2026</Copyright>
+    <Copyright>Copyright © CardSight AI 2026</Copyright>
     <PackageProjectUrl>https://github.com/CardSightAI/cardsight-sdk-dotnet</PackageProjectUrl>
     <RepositoryUrl>https://github.com/CardSightAI/cardsight-sdk-dotnet</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

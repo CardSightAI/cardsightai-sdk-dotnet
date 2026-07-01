@@ -64,7 +64,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `CardSightAIRateLimitException` for rate limiting
   - `CardSightAITimeoutException` for request timeouts
   - `CardSightAIServerException` for server errors
-- Retry policy configuration with configurable attempts and delays
 - Support for custom HTTP clients and headers
 - Complete example console application
 - Unit tests for core functionality
