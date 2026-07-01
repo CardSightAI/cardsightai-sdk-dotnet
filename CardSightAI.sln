@@ -1,0 +1,45 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9AB6FC54-3A0C-4991-A25B-A23E95C3104A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CardSightAI", "src\CardSightAI\CardSightAI.csproj", "{025BCD61-B3E8-4E82-BB49-19FEB4E60E5C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{D33211B6-C359-4850-87B1-8601C3ADB3FE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CardSightAI.Tests", "tests\CardSightAI.Tests\CardSightAI.Tests.csproj", "{AD4D48E0-9424-4FCA-8FEF-39A1E9FD6A0C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{A4F7B931-8CEF-4580-8F10-9D625575EDAE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CardSightAI.Examples", "examples\CardSightAI.Examples\CardSightAI.Examples.csproj", "{06E85455-FC0F-4EA0-9DAF-6923BD85FDA5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{025BCD61-B3E8-4E82-BB49-19FEB4E60E5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{025BCD61-B3E8-4E82-BB49-19FEB4E60E5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{025BCD61-B3E8-4E82-BB49-19FEB4E60E5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{025BCD61-B3E8-4E82-BB49-19FEB4E60E5C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD4D48E0-9424-4FCA-8FEF-39A1E9FD6A0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD4D48E0-9424-4FCA-8FEF-39A1E9FD6A0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD4D48E0-9424-4FCA-8FEF-39A1E9FD6A0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD4D48E0-9424-4FCA-8FEF-39A1E9FD6A0C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{06E85455-FC0F-4EA0-9DAF-6923BD85FDA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{06E85455-FC0F-4EA0-9DAF-6923BD85FDA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{06E85455-FC0F-4EA0-9DAF-6923BD85FDA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{06E85455-FC0F-4EA0-9DAF-6923BD85FDA5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{025BCD61-B3E8-4E82-BB49-19FEB4E60E5C} = {9AB6FC54-3A0C-4991-A25B-A23E95C3104A}
+		{AD4D48E0-9424-4FCA-8FEF-39A1E9FD6A0C} = {D33211B6-C359-4850-87B1-8601C3ADB3FE}
+		{06E85455-FC0F-4EA0-9DAF-6923BD85FDA5} = {A4F7B931-8CEF-4580-8F10-9D625575EDAE}
+	EndGlobalSection
+EndGlobal

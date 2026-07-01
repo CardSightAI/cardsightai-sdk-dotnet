@@ -52,3 +52,13 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# Claude Code (internal tooling — not shipped with the public SDK)
+# Covers the settings folder and project-memory files in any directory.
+# Case variants are listed explicitly so the rules also apply on
+# case-sensitive filesystems (e.g. Linux CI).
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+claude.md
+claude.local.md
