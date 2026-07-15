@@ -173,9 +173,9 @@ namespace CardSightAI.Generated
         /// Search across cards, sets, releases, and parallels
         /// </summary>
         /// <remarks>
-        /// Global fuzzy search endpoint that searches across card names, set names, release names, parallel names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps", "1952 mickey mantle", or "refractor". Uses PostgreSQL full-text search combined with trigram similarity for typo-tolerant matching. Results are ranked by relevance and returned as a mixed list of cards, sets, releases, and parallels. Cards and sets that match a parallel name (e.g., "Refractor") are boosted in relevance and include the matching parallelName in the response. Use the "type" parameter to filter to a specific entity type.
+        /// Global fuzzy search endpoint that searches across card names, set names, release names, parallel names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps", "1952 mickey mantle", or "refractor". Uses PostgreSQL full-text search combined with trigram similarity for typo-tolerant matching. Results are ranked by relevance and returned as a mixed list of cards, sets, releases, and parallels. Cards and sets that match a parallel name (e.g., "Refractor") are boosted in relevance and include the matching parallelName in the response. Slash notation is supported: append a standalone term like "/25" (e.g. "aaron judge /25") to hard-filter results to cards and parallels whose applicable parallel is serial-numbered to that value; matched results include the numberedTo field. Use the "type" parameter to filter to a specific entity type.
         /// </remarks>
-        /// <param name="q">Free-text search query. Searches across card names, set names, release names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps" or "1952 mickey mantle". Minimum 2 characters.</param>
+        /// <param name="q">Free-text search query. Searches across card names, set names, release names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps" or "1952 mickey mantle". Append a standalone slash term like "/25" to filter to cards and parallels whose parallel is numbered to that value (e.g. "aaron judge /25"). Minimum 2 characters.</param>
         /// <param name="take">Number of items to return per page. Minimum: 1, Maximum: 100, Default: 20. Use larger values for bulk data retrieval, smaller for responsive UIs.</param>
         /// <param name="skip">Number of items to skip (offset). Default: 0. Use for pagination: page 2 with take=20 would use skip=20, page 3 would use skip=40, etc.</param>
         /// <param name="type">Filter results to a specific entity type. When omitted, returns mixed results across all types.</param>
@@ -496,7 +496,7 @@ namespace CardSightAI.Generated
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
-        /// Search for parallels across sets and releases
+        /// Search for parallels across sets and releases (free)
         /// </summary>
         /// <remarks>
         /// Search for parallels by name and filter by release. Returns all sets containing the parallel with release information
@@ -517,7 +517,7 @@ namespace CardSightAI.Generated
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
-        /// Get detailed parallel information
+        /// Get detailed parallel information (free)
         /// </summary>
         /// <remarks>
         /// Retrieve detailed information about a specific Parallel, including set and release context. For partial parallels (isPartial=true), the response includes an array of Card IDs that have this Parallel.
@@ -2061,24 +2061,25 @@ namespace CardSightAI.Generated
         /// Get price history (bid/ask) for a card
         /// </summary>
         /// <remarks>
-        /// Returns historical pricing for a single card as a bid/ask spread: completed auction sales (the "bid" side — what cards actually sold for) alongside Buy It Now listings (the "ask" side — what sellers were asking, which is not necessarily a completed sale). Results are grouped into raw (ungraded) and graded sections, with graded results organized by grading company and grade value. Supports filtering by parallel variant, grade, time period, and listing type.
+        /// Returns historical pricing for a single card as a bid/ask spread: completed auction sales (the "bid" side — what cards actually sold for) alongside Buy It Now listings (the "ask" side — what sellers were asking, which is not necessarily a completed sale). Results are grouped into raw (ungraded) and graded sections, with graded results organized by grading company and grade value. Supports filtering by parallel variant, grade, time period, and listing type. Each call returns the most-recent listings for the card, up to a cap of 500 rows ending at `as_of_date` (default today, US Eastern). If that cap is hit a warning is returned in `messages`; to page further back through history, set `as_of_date` to the oldest `date` in the response and query again (the boundary day may repeat a few rows — duplicates, never gaps).
         /// </remarks>
         /// <param name="card_id">Card UUID</param>
         /// <param name="parallel_id">Filter by parallel variant. Pass a UUID for a specific parallel, "null" for base card only, or omit for all variants.</param>
         /// <param name="grade_id">Filter by grade. Pass a UUID for a specific grade, "null" for ungraded only, or omit for all grades.</param>
         /// <param name="period">Lookback period. Examples: "7d", "14d", "2w", "3m", "1y", "all". Omit or "all" for no time limit.</param>
+        /// <param name="as_of_date">Anchor date (US Eastern Time, YYYY-MM-DD) marking the most-recent day of the window; results are the most-recent listings on or before this date (up to the per-card row cap). Defaults to today. To page further back through history, set as_of_date to the oldest `date` in the previous response and query again. A future date is clamped to today.</param>
         /// <param name="listing_type">Filter by listing type. auction=completed auction sales (bid side), fixed=Buy It Now asking prices (ask side), both=all</param>
         /// <param name="limit">Maximum number of records to return per card</param>
         /// <returns>Default Response</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PricingResponse> GetCardPricingAsync(string card_id, string parallel_id = null, string grade_id = null, string period = null, Listing_type? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<PricingResponse> GetCardPricingAsync(string card_id, string parallel_id = null, string grade_id = null, string period = null, string as_of_date = null, Listing_type? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
         /// Get price history (bid/ask) for multiple cards
         /// </summary>
         /// <remarks>
-        /// Returns price history as a bid/ask spread for up to 100 cards in a single request — completed auction sales (bid) and Buy It Now asking prices (ask, not necessarily a completed sale). Each card is processed independently — individual cards may succeed or fail without affecting others. Results include the same raw/graded grouping as the single-card endpoint.
+        /// Returns price history as a bid/ask spread for up to 100 cards in a single request — completed auction sales (bid) and Buy It Now asking prices (ask, not necessarily a completed sale). Each card is processed independently — individual cards may succeed or fail without affecting others. Results include the same raw/graded grouping as the single-card endpoint. This endpoint is a recent market snapshot: it returns the most-recent listings per card up to `limit` (default 25, max 100). A single request covers up to 100 cards, so the default returns up to 2,500 datapoints and the maximum up to 10,000. When a card hits that cap a warning is returned in its `messages`; for a card's full history use GET /pricing/{card_id} with `as_of_date` to page backward.
         /// </remarks>
         /// <returns>Default Response</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
@@ -3298,9 +3299,9 @@ namespace CardSightAI.Generated
         /// Search across cards, sets, releases, and parallels
         /// </summary>
         /// <remarks>
-        /// Global fuzzy search endpoint that searches across card names, set names, release names, parallel names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps", "1952 mickey mantle", or "refractor". Uses PostgreSQL full-text search combined with trigram similarity for typo-tolerant matching. Results are ranked by relevance and returned as a mixed list of cards, sets, releases, and parallels. Cards and sets that match a parallel name (e.g., "Refractor") are boosted in relevance and include the matching parallelName in the response. Use the "type" parameter to filter to a specific entity type.
+        /// Global fuzzy search endpoint that searches across card names, set names, release names, parallel names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps", "1952 mickey mantle", or "refractor". Uses PostgreSQL full-text search combined with trigram similarity for typo-tolerant matching. Results are ranked by relevance and returned as a mixed list of cards, sets, releases, and parallels. Cards and sets that match a parallel name (e.g., "Refractor") are boosted in relevance and include the matching parallelName in the response. Slash notation is supported: append a standalone term like "/25" (e.g. "aaron judge /25") to hard-filter results to cards and parallels whose applicable parallel is serial-numbered to that value; matched results include the numberedTo field. Use the "type" parameter to filter to a specific entity type.
         /// </remarks>
-        /// <param name="q">Free-text search query. Searches across card names, set names, release names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps" or "1952 mickey mantle". Minimum 2 characters.</param>
+        /// <param name="q">Free-text search query. Searches across card names, set names, release names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps" or "1952 mickey mantle". Append a standalone slash term like "/25" to filter to cards and parallels whose parallel is numbered to that value (e.g. "aaron judge /25"). Minimum 2 characters.</param>
         /// <param name="take">Number of items to return per page. Minimum: 1, Maximum: 100, Default: 20. Use larger values for bulk data retrieval, smaller for responsive UIs.</param>
         /// <param name="skip">Number of items to skip (offset). Default: 0. Use for pagination: page 2 with take=20 would use skip=20, page 3 would use skip=40, etc.</param>
         /// <param name="type">Filter results to a specific entity type. When omitted, returns mixed results across all types.</param>
@@ -6249,7 +6250,7 @@ namespace CardSightAI.Generated
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
-        /// Search for parallels across sets and releases
+        /// Search for parallels across sets and releases (free)
         /// </summary>
         /// <remarks>
         /// Search for parallels by name and filter by release. Returns all sets containing the parallel with release information
@@ -6428,7 +6429,7 @@ namespace CardSightAI.Generated
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
-        /// Get detailed parallel information
+        /// Get detailed parallel information (free)
         /// </summary>
         /// <remarks>
         /// Retrieve detailed information about a specific Parallel, including set and release context. For partial parallels (isPartial=true), the response includes an array of Card IDs that have this Parallel.
@@ -15385,17 +15386,18 @@ namespace CardSightAI.Generated
         /// Get price history (bid/ask) for a card
         /// </summary>
         /// <remarks>
-        /// Returns historical pricing for a single card as a bid/ask spread: completed auction sales (the "bid" side — what cards actually sold for) alongside Buy It Now listings (the "ask" side — what sellers were asking, which is not necessarily a completed sale). Results are grouped into raw (ungraded) and graded sections, with graded results organized by grading company and grade value. Supports filtering by parallel variant, grade, time period, and listing type.
+        /// Returns historical pricing for a single card as a bid/ask spread: completed auction sales (the "bid" side — what cards actually sold for) alongside Buy It Now listings (the "ask" side — what sellers were asking, which is not necessarily a completed sale). Results are grouped into raw (ungraded) and graded sections, with graded results organized by grading company and grade value. Supports filtering by parallel variant, grade, time period, and listing type. Each call returns the most-recent listings for the card, up to a cap of 500 rows ending at `as_of_date` (default today, US Eastern). If that cap is hit a warning is returned in `messages`; to page further back through history, set `as_of_date` to the oldest `date` in the response and query again (the boundary day may repeat a few rows — duplicates, never gaps).
         /// </remarks>
         /// <param name="card_id">Card UUID</param>
         /// <param name="parallel_id">Filter by parallel variant. Pass a UUID for a specific parallel, "null" for base card only, or omit for all variants.</param>
         /// <param name="grade_id">Filter by grade. Pass a UUID for a specific grade, "null" for ungraded only, or omit for all grades.</param>
         /// <param name="period">Lookback period. Examples: "7d", "14d", "2w", "3m", "1y", "all". Omit or "all" for no time limit.</param>
+        /// <param name="as_of_date">Anchor date (US Eastern Time, YYYY-MM-DD) marking the most-recent day of the window; results are the most-recent listings on or before this date (up to the per-card row cap). Defaults to today. To page further back through history, set as_of_date to the oldest `date` in the previous response and query again. A future date is clamped to today.</param>
         /// <param name="listing_type">Filter by listing type. auction=completed auction sales (bid side), fixed=Buy It Now asking prices (ask side), both=all</param>
         /// <param name="limit">Maximum number of records to return per card</param>
         /// <returns>Default Response</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PricingResponse> GetCardPricingAsync(string card_id, string parallel_id = null, string grade_id = null, string period = null, Listing_type? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<PricingResponse> GetCardPricingAsync(string card_id, string parallel_id = null, string grade_id = null, string period = null, string as_of_date = null, Listing_type? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (card_id == null)
                 throw new System.ArgumentNullException("card_id");
@@ -15426,6 +15428,10 @@ namespace CardSightAI.Generated
                     if (period != null)
                     {
                         urlBuilder_.Append(System.Uri.EscapeDataString("period")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(period, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (as_of_date != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("as_of_date")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(as_of_date, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
                     }
                     if (listing_type != null)
                     {
@@ -15544,7 +15550,7 @@ namespace CardSightAI.Generated
         /// Get price history (bid/ask) for multiple cards
         /// </summary>
         /// <remarks>
-        /// Returns price history as a bid/ask spread for up to 100 cards in a single request — completed auction sales (bid) and Buy It Now asking prices (ask, not necessarily a completed sale). Each card is processed independently — individual cards may succeed or fail without affecting others. Results include the same raw/graded grouping as the single-card endpoint.
+        /// Returns price history as a bid/ask spread for up to 100 cards in a single request — completed auction sales (bid) and Buy It Now asking prices (ask, not necessarily a completed sale). Each card is processed independently — individual cards may succeed or fail without affecting others. Results include the same raw/graded grouping as the single-card endpoint. This endpoint is a recent market snapshot: it returns the most-recent listings per card up to `limit` (default 25, max 100). A single request covers up to 100 cards, so the default returns up to 2,500 datapoints and the maximum up to 10,000. When a card hits that cap a warning is returned in its `messages`; for a card's full history use GET /pricing/{card_id} with `as_of_date` to page backward.
         /// </remarks>
         /// <returns>Default Response</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
@@ -20894,6 +20900,12 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("take", Required = Newtonsoft.Json.Required.Always)]
         public double Take { get; set; }
 
+        /// <summary>
+        /// Optional server advisory messages, e.g. a warning that an unrecognized query parameter was ignored. Omitted when there are none.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("messages", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<ServerMessageInput> Messages { get; set; }
+
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -22094,6 +22106,13 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("parallelName", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string ParallelName { get; set; }
 
+        /// <summary>
+        /// Serial print-run limit of the matching parallel (e.g. 25 for a /25). Present on parallel results, and on card results matched via `/N` slash notation.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("numberedTo", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [System.ComponentModel.DataAnnotations.Range(double.MinValue, 9007199254740991D)]
+        public long NumberedTo { get; set; }
+
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -22132,6 +22151,12 @@ namespace CardSightAI.Generated
         /// </summary>
         [Newtonsoft.Json.JsonProperty("take", Required = Newtonsoft.Json.Required.Always)]
         public double Take { get; set; }
+
+        /// <summary>
+        /// Optional server advisory messages, e.g. a warning that an unrecognized query parameter was ignored. Omitted when there are none.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("messages", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<ServerMessageInput> Messages { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -22456,10 +22481,10 @@ namespace CardSightAI.Generated
         public BulkPricingRequestInputListing_type Listing_type { get; set; } = CardSightAI.Generated.BulkPricingRequestInputListing_type.Both;
 
         /// <summary>
-        /// Maximum number of records per card
+        /// Most-recent listings to return per card. Defaults to 25 (server-applied when omitted) — across a full 100-card request that is up to 2,500 datapoints. Max 100 (up to 10,000 datapoints per request). For a card's full history use GET /pricing/{card_id} with as_of_date.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("limit", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        [System.ComponentModel.DataAnnotations.Range(int.MinValue, 500)]
+        [System.ComponentModel.DataAnnotations.Range(int.MinValue, 100)]
         public int Limit { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -22744,7 +22769,7 @@ namespace CardSightAI.Generated
         public string Listing_type { get; set; }
 
         /// <summary>
-        /// Date the data was retrieved
+        /// Anchor date (US Eastern Time) the lookback window ends on — echoes the as_of_date input, or today when omitted.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("as_of_date", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -22979,6 +23004,12 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("meta", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required]
         public PricingMetaInput Meta { get; set; } = new PricingMetaInput();
+
+        /// <summary>
+        /// Server advisory messages (e.g. the requested period was truncated, or the row cap was hit and more listings may exist within the window). Omitted when there are none.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("messages", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<ServerMessageInput> Messages { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -27524,6 +27555,12 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("take", Required = Newtonsoft.Json.Required.Always)]
         public double Take { get; set; }
 
+        /// <summary>
+        /// Optional server advisory messages, e.g. a warning that an unrecognized query parameter was ignored. Omitted when there are none.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("messages", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<ServerMessage> Messages { get; set; }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -28499,6 +28536,13 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("parallelName", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string ParallelName { get; set; }
 
+        /// <summary>
+        /// Serial print-run limit of the matching parallel (e.g. 25 for a /25). Present on parallel results, and on card results matched via `/N` slash notation.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("numberedTo", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [System.ComponentModel.DataAnnotations.Range(double.MinValue, 9007199254740991D)]
+        public long NumberedTo { get; set; }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -28528,6 +28572,12 @@ namespace CardSightAI.Generated
         /// </summary>
         [Newtonsoft.Json.JsonProperty("take", Required = Newtonsoft.Json.Required.Always)]
         public double Take { get; set; }
+
+        /// <summary>
+        /// Optional server advisory messages, e.g. a warning that an unrecognized query parameter was ignored. Omitted when there are none.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("messages", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<ServerMessage> Messages { get; set; }
 
     }
 
@@ -28782,10 +28832,10 @@ namespace CardSightAI.Generated
         public BulkPricingRequestListing_type Listing_type { get; set; } = CardSightAI.Generated.BulkPricingRequestListing_type.Both;
 
         /// <summary>
-        /// Maximum number of records per card
+        /// Most-recent listings to return per card. Defaults to 25 (server-applied when omitted) — across a full 100-card request that is up to 2,500 datapoints. Max 100 (up to 10,000 datapoints per request). For a card's full history use GET /pricing/{card_id} with as_of_date.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("limit", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        [System.ComponentModel.DataAnnotations.Range(int.MinValue, 500)]
+        [System.ComponentModel.DataAnnotations.Range(int.MinValue, 100)]
         public int Limit { get; set; }
 
     }
@@ -29025,7 +29075,7 @@ namespace CardSightAI.Generated
         public string Listing_type { get; set; }
 
         /// <summary>
-        /// Date the data was retrieved
+        /// Anchor date (US Eastern Time) the lookback window ends on — echoes the as_of_date input, or today when omitted.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("as_of_date", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -29206,6 +29256,12 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("meta", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required]
         public PricingMeta Meta { get; set; } = new PricingMeta();
+
+        /// <summary>
+        /// Server advisory messages (e.g. the requested period was truncated, or the row cap was hit and more listings may exist within the window). Omitted when there are none.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("messages", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<ServerMessage> Messages { get; set; }
 
     }
 

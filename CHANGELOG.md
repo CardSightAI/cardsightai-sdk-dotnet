@@ -25,6 +25,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Nothing yet
 
+## [2.1.0] - 2026-07-15
+
+### Added
+- **Pricing history paging** — `GetCardPricingAsync` accepts an optional `as_of_date` query param; responses are capped at 500 rows with an advisory `Messages` array.
+- **Catalog `/N` slash search** — `SearchResult` now includes `NumberedTo`.
+- **Server advisory messages** — `Messages` (`ServerMessage[]`) arrays added to `PaginatedCardsResponse`, `CatalogSearchResponse`, and `PricingResponse`.
+
+### Changed
+- Regenerated the NSwag client from the latest OpenAPI spec.
+
+### Notes
+- The new `as_of_date` parameter in `GetCardPricingAsync` is inserted mid-list in the server-declared order, between `period` and `listing_type`. Use named arguments when calling this method to avoid binding issues.
+
 ## [2.0.0] - 2026-06-30
 
 ### Added

@@ -311,6 +311,10 @@ var cardResults = await client.Api.SearchCatalogAsync(
     min_year: "2020",
     max_year: "2024");
 
+// Slash notation: append a standalone "/N" term to hard-filter to cards/parallels
+// serial-numbered to that value. Matches include NumberedTo on the result.
+var numberedResults = await client.Api.SearchCatalogAsync(q: "aaron judge /25");
+
 // Process results
 Console.WriteLine($"Found {results.Total_count} results");
 foreach (var r in results.Results)
@@ -318,6 +322,14 @@ foreach (var r in results.Results)
     Console.WriteLine($"[{r.Type}] {r.Name} (relevance: {r.Relevance})");
     if (!string.IsNullOrEmpty(r.SetName)) Console.WriteLine($"  Set: {r.SetName}");
     if (!string.IsNullOrEmpty(r.Year)) Console.WriteLine($"  Year: {r.Year}");
+    if (r.NumberedTo > 0) Console.WriteLine($"  Numbered to /{r.NumberedTo}");
+}
+
+// Messages is an advisory array (e.g. an ignored/unrecognized query parameter);
+// it's omitted from the response when there's nothing to report.
+if (results.Messages is { Count: > 0 })
+{
+    foreach (var m in results.Messages) Console.WriteLine($"  Notice: {m.Message}");
 }
 ```
 
@@ -387,6 +399,7 @@ foreach (var company in pricing.Graded)
 }
 
 // Filter by parallel, grade, time period, and listing type
+// Use named arguments to ensure correct parameter binding
 var filtered = await client.Api.GetCardPricingAsync(
     card_id: "card_uuid",
     parallel_id: "parallel_uuid",  // Specific parallel (omit for all)
@@ -394,6 +407,19 @@ var filtered = await client.Api.GetCardPricingAsync(
     period: "90d",                  // "7d", "2w", "3m", "1y", "all"
     listing_type: Listing_type.Both,
     limit: 50);
+
+// Each call returns the most-recent listings up to a cap of 500 rows ending at
+// as_of_date (default: today, US Eastern). If the cap is hit, pricing.Messages
+// carries an advisory and you can page further back through history by setting
+// as_of_date to the oldest `date` seen in the response.
+if (pricing.Messages is { Count: > 0 })
+{
+    foreach (var m in pricing.Messages) Console.WriteLine($"  Notice: {m.Message}");
+}
+
+var olderPage = await client.Api.GetCardPricingAsync(
+    card_id: "card_uuid",
+    as_of_date: "2026-01-01");  // YYYY-MM-DD, US Eastern; defaults to today
 
 // Bulk pricing for multiple cards (up to 100)
 var bulk = await client.Api.GetBulkPricingAsync(new BulkPricingRequestInput
