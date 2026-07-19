@@ -933,8 +933,8 @@ The API client is generated at build time by [NSwag](https://github.com/RicoSute
 
 ```bash
 # Clone the repository
-git clone https://github.com/CardSightAI/cardsight-sdk-dotnet.git
-cd cardsight-sdk-dotnet
+git clone https://github.com/CardSightAI/cardsightai-sdk-dotnet.git
+cd cardsightai-sdk-dotnet
 
 # Build the solution (regenerates the client from the OpenAPI spec)
 dotnet build
@@ -979,7 +979,7 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed list of changes and version hist
 - **Email**: support@cardsight.ai
 - **Website**: [cardsight.ai](https://cardsight.ai)
 - **API Documentation**: [api.cardsight.ai/documentation](https://api.cardsight.ai/documentation)
-- **Issues**: [GitHub Issues](https://github.com/CardSightAI/cardsight-sdk-dotnet/issues)
+- **Issues**: [GitHub Issues](https://github.com/CardSightAI/cardsightai-sdk-dotnet/issues)
 
 ---
 

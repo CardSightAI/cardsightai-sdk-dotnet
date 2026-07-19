@@ -17,13 +17,14 @@
     <Product>CardSight AI .NET SDK</Product>
     <Description>Official .NET SDK for CardSight AI — AI-powered trading card identification from images, catalog search, pricing, marketplace and graded population data, and collection management. 12M+ cards across sports (baseball, football, basketball) and trading card games (Pokémon, Magic, Yu-Gi-Oh!). Strongly-typed, DI-ready, and well-suited to both production apps and AI agents. Free tier available.</Description>
     <Copyright>Copyright © CardSight AI 2026</Copyright>
-    <PackageProjectUrl>https://github.com/CardSightAI/cardsight-sdk-dotnet</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/CardSightAI/cardsight-sdk-dotnet</RepositoryUrl>
+    <PackageProjectUrl>https://cardsight.ai</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/CardSightAI/cardsightai-sdk-dotnet</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>cardsight;cardsightai;trading-cards;sports-cards;baseball-cards;tcg;card-identification;image-recognition;collectibles;pricing;marketplace;grading;psa;population-report;collection-management;pokemon;ai;api;sdk;dotnet</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -46,6 +47,7 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

@@ -96,6 +96,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Known Issues
 - The generated client contains some duplicate nested object classes (e.g., Prices2-12) due to inline schema definitions in the OpenAPI specification. This does not affect functionality, and these duplicates will be resolved in future API updates
 
-[Unreleased]: https://github.com/CardSightAI/cardsight-sdk-dotnet/compare/v2.0.0...HEAD
-[2.0.0]: https://github.com/CardSightAI/cardsight-sdk-dotnet/compare/v1.0.0...v2.0.0
-[1.0.0]: https://github.com/CardSightAI/cardsight-sdk-dotnet/releases/tag/v1.0.0
+[Unreleased]: https://github.com/CardSightAI/cardsightai-sdk-dotnet/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/CardSightAI/cardsightai-sdk-dotnet/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/CardSightAI/cardsightai-sdk-dotnet/compare/v1.0.0...v2.0.0
+[1.0.0]: https://github.com/CardSightAI/cardsightai-sdk-dotnet/releases/tag/v1.0.0
