@@ -77,7 +77,7 @@ Install-Package CardSightAI
 
 ```xml
 <!-- PackageReference -->
-<PackageReference Include="CardSightAI" Version="2.0.0" />
+<PackageReference Include="CardSightAI" Version="3.0.0" />
 ```
 
 ## Getting Started
@@ -186,7 +186,7 @@ var footballResult = await client.Api.IdentifyCardBySegmentAsync("football", ima
 
 Each detection (`IdentificationData`) has a `Confidence` level and a `Card` (`CardDetails`). The `Card` is always present, but its fields are populated based on the match level:
 
-- **Exact match**: `Card.Id` present — all fields populated including `Name`, `Number`, and optionally `Parallel`
+- **Exact match**: `Card.Id` present — all fields populated including `Name`, `Number`, and optionally `ParallelSuggestions`
 - **Set-level match**: `Card.SetId` present but no `Card.Id` — release/set info available, no specific card
 - **No match**: `Card` fields are empty — a card was detected in the image but couldn't be identified
 
@@ -272,22 +272,24 @@ if (result.Detections.Any())
 Every detection's `Card` (`CardDetails`) carries extra context beyond the core identity fields:
 
 - `NumberedTo` — print run for numbered base cards (e.g. `25` for a `/25`), independent of parallels
-- `Fields` — key/value metadata tailored to the TCG (e.g. `HP`, `RARITY`, `ARTIST`, `MANA_COST`)
-- `Parallel` (`ParallelSummary`) — present when a parallel variant (Refractor, Prizm, numbered parallel, etc.) is detected
+- `Fields` — key/value metadata tailored to the TCG (e.g. `HP`, `RARITY`, `ARTIST`, `MANA_COST`); may include a `CARD_LANGUAGE` entry with the scanned card's ISO 639-1 language code
+- `ParallelSuggestions` (`ICollection<ParallelSuggestion>`) — ranked list of possible parallels (Refractor, Prizm, numbered parallel, etc.), best match first; each entry may carry a `Confidence` (`High`/`Medium`/`Low`) — a missing value means the tier wasn't assessed, not `Low`. Omitted when there's no parallel evidence.
 - `Attributes` — catalog attribute identifiers attached to the card
 
 ```csharp
 var detection = result.Detections.FirstOrDefault();
-if (detection is not null && detection.Card.Parallel is not null)
+var topParallel = detection?.Card.ParallelSuggestions?.FirstOrDefault();
+if (topParallel is not null)
 {
-    var parallel = detection.Card.Parallel;
-    Console.WriteLine($"Parallel: {parallel.Name}");
+    Console.WriteLine($"Parallel: {topParallel.Name} (confidence: {topParallel.Confidence})");
     if (detection.Card.NumberedTo > 0)
     {
         Console.WriteLine($"  🔥 Numbered to /{detection.Card.NumberedTo}");
     }
 }
 ```
+
+> **Migrating from 2.x:** `CardDetails.Parallel` (a single `ParallelSummary`) was removed. Use `ParallelSuggestions[0]` (a `ParallelSuggestion`) for the best-ranked parallel instead.
 
 See [Fields (Flexible Metadata System)](#fields-flexible-metadata-system) for end-to-end Pokémon and Magic: The Gathering examples.
 

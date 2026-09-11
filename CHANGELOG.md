@@ -25,6 +25,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Nothing yet
 
+## [3.0.0] - 2026-09-11
+
+### Breaking
+- **`CardDetails.Parallel` removed.** The single `ParallelSummary` field on `CardDetails` (and on `CardSuggestion`) has been replaced by `ParallelSuggestions` (`ICollection<ParallelSuggestion>`), a ranked list of possible parallels ordered best-match-first. Each `ParallelSuggestion` carries the same `Id`/`Name`/`Description`/`IsPartial`/`NumberedTo`/`Cards` fields as the old `ParallelSummary`, plus an optional `Confidence` (`ParallelSuggestionConfidence`: `High` | `Medium` | `Low`) — a missing value means the tier was not assessed, not `Low`.
+  - **Migration:** replace `card.Parallel` with `card.ParallelSuggestions?.FirstOrDefault()` to get the best-ranked candidate; iterate the full collection to see all remaining possibilities.
+
+### Added
+- **Card pricing timeseries** — `GetCardPricingTimeseriesAsync(Interval interval, string card_id, ...)` (`GET /v1/pricing/{card_id}/timeseries`), tagged **Pricing**. Returns OHLC-style candle series bucketed by `interval` (`daily` | `weekly` | `monthly`), split into `Raw` (ungraded) and `Graded` (grouped by grading company/grade) sections. Optional filters: `periods`, `as_of_date`, `listing_type`, `parallel_id`, `grade_id`. New DTOs: `TimeseriesResponse`, `TimeseriesQueryEcho`, `RawTimeseriesSection`, `TimeseriesCompanyGroup`, `TimeseriesGradeGroup`, `TimeseriesTypeTotals`, `CandlePeriod`, `CandleStats`, and the `Interval` enum.
+- **`CardSuggestion` now carries full card fields** (`Id`, `SegmentId`, `ReleaseId`, `SetId`, `Year`, `Manufacturer`, `ReleaseName`, `SetName`, `Name`, `Number`, `Description`, `NumberedTo`, `Attributes`, `VariationOf`, `Fields`) when detection confidence is `Medium` or `Low`, instead of a minimal shape.
+- **`SearchResult` gained `SegmentName`, `CardNumber`, and `MatchKind`** (`SearchResultMatchKind`: `exact` | `fuzzy`) — present on every result of a page only when fuzzy matching engaged for that request.
+- **`FeedbackResponseStatus` gained new values**: `New`, `Confirmed_bug`, `Enhancement_backlog`, `Enhancement_planned`, `Released`, `Not_an_issue`, `Closed` (alongside the existing lifecycle values).
+- Card `Fields` (`CardDetails.Fields` / `CardSuggestion.Fields`) may now include a `CARD_LANGUAGE` entry with the ISO 639-1 code of the scanned card's language.
+- Documented `409 Conflict` response on feedback submission, and `408 Request Timeout` / `503 Service Unavailable` on catalog search.
+
+### Changed
+- Bumped the SDK user-agent to `CardSightAI-DotNet-SDK/3.0.0`.
+- Regenerated the NSwag client from the latest OpenAPI spec (79 paths, 364 schemas, 18 tags).
+- Catalog title search `q` parameter's documented minimum length is now 2 characters.
+- Parallel catalog endpoints (`GetParallelsAsync`, `GetParallelAsync`) are no longer labelled as part of the free tier in the spec.
+
 ## [2.1.0] - 2026-07-15
 
 ### Added

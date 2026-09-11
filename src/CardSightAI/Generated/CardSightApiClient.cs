@@ -65,7 +65,7 @@ namespace CardSightAI.Generated
         /// Identifies card(s) from the submitted image (automatic segment detection)
         /// </summary>
         /// <remarks>
-        /// Identify one or more cards from an image. The segment (sport/category) of each card is detected automatically, so a single image may contain cards from different segments (e.g., baseball and basketball). To force a specific segment, use POST /card/:segment instead. Supports both multipart/form-data and direct binary upload (image/jpeg, image/png, image/webp). Maximum file size: 20MB. Supported formats: JPEG, PNG, WebP, HEIF, HEIC.
+        /// Identify one or more cards from an image. The segment (sport/category) of each card is detected automatically, so a single image may contain cards from different segments (e.g., baseball and basketball). To force a specific segment, use POST /card/:segment instead. Supports both multipart/form-data and direct binary upload (image/jpeg, image/png, image/webp). Maximum file size: 20MB. Supported formats: JPEG, PNG, WebP, HEIF, HEIC. Where a parallel variant is recognised it is returned in `card.parallelSuggestions` (beta): best match first, with a confidence tier on each entry where available.
         /// </remarks>
         /// <param name="image">The image file to analyze</param>
         /// <returns>Default Response</returns>
@@ -77,7 +77,7 @@ namespace CardSightAI.Generated
         /// Identifies a card from the submitted image for a specific segment (sport)
         /// </summary>
         /// <remarks>
-        /// Identify a card from an image for a specific segment (sport). The segment can be specified by UUID, name, or shortname (case-insensitive, e.g., "football", "basketball", "magic"). Supports both multipart/form-data and direct binary upload (image/jpeg, image/png, image/webp). Maximum file size: 20MB. Supported formats: JPEG, PNG, WebP, HEIF, HEIC.
+        /// Identify a card from an image for a specific segment (sport). The segment can be specified by UUID, name, or shortname (case-insensitive, e.g., "football", "basketball", "magic"). Supports both multipart/form-data and direct binary upload (image/jpeg, image/png, image/webp). Maximum file size: 20MB. Supported formats: JPEG, PNG, WebP, HEIF, HEIC. Where a parallel variant is recognised it is returned in `card.parallelSuggestions` (beta): best match first, with a confidence tier on each entry where available.
         /// </remarks>
         /// <param name="segment">Segment identifier — a UUID, segment name, or shortname (case-insensitive, e.g., "football", "baseball", "magic")</param>
         /// <param name="image">The image file to analyze</param>
@@ -173,9 +173,9 @@ namespace CardSightAI.Generated
         /// Search across cards, sets, releases, and parallels
         /// </summary>
         /// <remarks>
-        /// Global fuzzy search endpoint that searches across card names, set names, release names, parallel names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps", "1952 mickey mantle", or "refractor". Uses PostgreSQL full-text search combined with trigram similarity for typo-tolerant matching. Results are ranked by relevance and returned as a mixed list of cards, sets, releases, and parallels. Cards and sets that match a parallel name (e.g., "Refractor") are boosted in relevance and include the matching parallelName in the response. Slash notation is supported: append a standalone term like "/25" (e.g. "aaron judge /25") to hard-filter results to cards and parallels whose applicable parallel is serial-numbered to that value; matched results include the numberedTo field. Use the "type" parameter to filter to a specific entity type.
+        /// Global fuzzy search endpoint that searches across card names, set names, release names, parallel names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps", "1952 mickey mantle", or "refractor". Matching is typo-tolerant. Results are ranked by relevance and returned as a mixed list of cards, sets, releases, and parallels. Cards and sets that match a parallel name (e.g., "Refractor") are boosted in relevance and include the matching parallelName in the response. Slash notation is supported: append a standalone term like "/25" (e.g. "aaron judge /25") to hard-filter results to cards and parallels whose applicable parallel is serial-numbered to that value; matched results include the numberedTo field. Use the "type" parameter to filter to a specific entity type.
         /// </remarks>
-        /// <param name="q">Free-text search query. Searches across card names, set names, release names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps" or "1952 mickey mantle". Append a standalone slash term like "/25" to filter to cards and parallels whose parallel is numbered to that value (e.g. "aaron judge /25"). Minimum 2 characters.</param>
+        /// <param name="q">Free-text search query. Searches across card names, set names, release names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps" or "1952 mickey mantle". Append a standalone slash term like "/25" to filter to cards and parallels whose parallel is numbered to that value (e.g. "aaron judge /25"). Minimum 2 characters (after trimming surrounding whitespace).</param>
         /// <param name="take">Number of items to return per page. Minimum: 1, Maximum: 100, Default: 20. Use larger values for bulk data retrieval, smaller for responsive UIs.</param>
         /// <param name="skip">Number of items to skip (offset). Default: 0. Use for pagination: page 2 with take=20 would use skip=20, page 3 would use skip=40, etc.</param>
         /// <param name="type">Filter results to a specific entity type. When omitted, returns mixed results across all types.</param>
@@ -496,7 +496,7 @@ namespace CardSightAI.Generated
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
-        /// Search for parallels across sets and releases (free)
+        /// Search for parallels across sets and releases
         /// </summary>
         /// <remarks>
         /// Search for parallels by name and filter by release. Returns all sets containing the parallel with release information
@@ -517,7 +517,7 @@ namespace CardSightAI.Generated
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
-        /// Get detailed parallel information (free)
+        /// Get detailed parallel information
         /// </summary>
         /// <remarks>
         /// Retrieve detailed information about a specific Parallel, including set and release context. For partial parallels (isPartial=true), the response includes an array of Card IDs that have this Parallel.
@@ -2087,18 +2087,36 @@ namespace CardSightAI.Generated
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
+        /// Get listing price time series (candlestick rollups) for a card
+        /// </summary>
+        /// <remarks>
+        /// Returns per-period descriptive statistics — mean, median, high, low, and count — aggregated over a card's marketplace listings, grouped into daily, weekly, or monthly buckets. Statistics are split by grade: `raw` holds candles for ungraded listings, and `graded` holds one candle series per grade, grouped by grading company — so graded and ungraded prices never blend into one candle range. Within each series, candles are further split by listing type, following the same bid/ask semantics as GET /pricing/{card_id}: auction candles summarize completed auction sales (the "bid" side), while fixed candles summarize Buy It Now asking prices (the "ask" side — listed prices, not necessarily completed sales). The parallel dimension is request-controlled: omit parallel_id and each grade's series blends all parallels of that grade; pass "null" for base-card-only candles or a UUID for one parallel. Use this to chart price trends over time. The viewpoint is `as_of_date` looking backward: the newest bucket is the one containing that date (default today, UTC) and the window extends back `periods` buckets (defaults: daily 90, weekly 52, monthly 24; `periods` above 365 is rejected, while weekly values above 156 and monthly values above 120 are clamped to those per-interval caps — the response echoes the effective values). Buckets, listing types, and grades with no listings are omitted rather than returned as zeros, and a card with no listings in the window returns an empty raw section and empty graded array as a success. A grouped outlier filter is applied over the whole window per grade/parallel variant — a listing is only ever judged against other listings of its own variant; per-type filtered counts are reported in each series' totals. Statistics are descriptive summaries of raw listings — not valuations.
+        /// </remarks>
+        /// <param name="interval">Rollup bucket size: daily = UTC calendar day, weekly = ISO week (Monday start), monthly = calendar month.</param>
+        /// <param name="card_id">Card UUID</param>
+        /// <param name="periods">How many buckets to look back. Defaults per interval when omitted: daily 90, weekly 52, monthly 24. Values above 365 are rejected; weekly values above 156 and monthly values above 120 are clamped to those per-interval caps, and the response echoes the effective value.</param>
+        /// <param name="as_of_date">Viewpoint date (UTC, YYYY-MM-DD): the newest bucket is the one containing this date and the window extends back `periods` buckets. Defaults to today (UTC).</param>
+        /// <param name="listing_type">Which listing-type series to compute. Stats are always split by type — this only restricts which types appear. auction=completed auction sales (bid side), fixed=Buy It Now asking prices (ask side, not necessarily completed sales), both=all</param>
+        /// <param name="parallel_id">Filter by parallel variant. Pass a UUID for a specific parallel, "null" for base card only, or omit for all variants.</param>
+        /// <param name="grade_id">Filter by grade. Pass a UUID for a specific grade, "null" for ungraded only, or omit for all grades.</param>
+        /// <returns>Default Response</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<TimeseriesResponse> GetCardPricingTimeseriesAsync(Interval interval, string card_id, int? periods = null, string as_of_date = null, Listing_type2? listing_type = null, string parallel_id = null, string grade_id = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <summary>
         /// Search price history by listing title
         /// </summary>
         /// <remarks>
         /// Free-text fuzzy search over marketplace listing titles for historical pricing — completed auction sales (the "bid" side) and Buy It Now asking prices (the "ask" side, not necessarily a completed sale). Surfaces raw listing data including listings that were never matched to a canonical card — useful for cards our matcher struggles with or sellers who use unusual titles. Returns a flat list of results ranked by title relevance; each result carries the canonical card it matched (when any). Supports filtering by listing type and time period.
         /// </remarks>
-        /// <param name="q">Free-text search over marketplace listing titles. Surfaces historical pricing — completed auction sales (bid) and Buy It Now asking prices (ask) — including listings never matched to a canonical card. 3–300 characters.</param>
+        /// <param name="q">Free-text search over marketplace listing titles. Surfaces historical pricing — completed auction sales (bid) and Buy It Now asking prices (ask) — including listings never matched to a canonical card. 2–300 characters.</param>
         /// <param name="period">Lookback period. Examples: "7d", "14d", "2w", "3m", "1y", "all". Omit or "all" for no time limit.</param>
         /// <param name="listing_type">Filter by listing type. auction=completed auction sales (bid side), fixed=Buy It Now asking prices (ask side), both=all</param>
         /// <param name="limit">Maximum number of records to return. Default 100, hard cap 500.</param>
         /// <returns>Default Response</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<PricingSearchResponse> SearchPricingByTitleAsync(string q, string period = null, Listing_type2? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<PricingSearchResponse> SearchPricingByTitleAsync(string q, string period = null, Listing_type3? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
@@ -2114,7 +2132,7 @@ namespace CardSightAI.Generated
         /// <param name="limit">Maximum number of records to return per card</param>
         /// <returns>Default Response</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<MarketplaceResponse> GetCardMarketplaceAsync(string card_id, string parallel_id = null, string grade_id = null, Listing_type3? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<MarketplaceResponse> GetCardMarketplaceAsync(string card_id, string parallel_id = null, string grade_id = null, Listing_type4? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
@@ -2123,12 +2141,12 @@ namespace CardSightAI.Generated
         /// <remarks>
         /// Free-text fuzzy search over marketplace listing titles for currently active listings. Surfaces raw listing data including listings that were never matched to a canonical card — useful for cards our matcher struggles with or sellers who use unusual titles. Returns a flat list of results ranked by title relevance; each result carries the canonical card it matched (when any). Supports filtering by listing type.
         /// </remarks>
-        /// <param name="q">Free-text search over marketplace listing titles. Surfaces active listings, including ones never matched to a canonical card. 3–300 characters.</param>
+        /// <param name="q">Free-text search over marketplace listing titles. Surfaces active listings, including ones never matched to a canonical card. 2–300 characters.</param>
         /// <param name="listing_type">Filter by listing type. auction=auctions, fixed=buy-it-now, both=all</param>
         /// <param name="limit">Maximum number of records to return. Default 100, hard cap 500.</param>
         /// <returns>Default Response</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<MarketplaceSearchResponse> SearchMarketplaceByTitleAsync(string q, Listing_type4? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<MarketplaceSearchResponse> SearchMarketplaceByTitleAsync(string q, Listing_type5? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
@@ -2573,7 +2591,7 @@ namespace CardSightAI.Generated
         /// Identifies card(s) from the submitted image (automatic segment detection)
         /// </summary>
         /// <remarks>
-        /// Identify one or more cards from an image. The segment (sport/category) of each card is detected automatically, so a single image may contain cards from different segments (e.g., baseball and basketball). To force a specific segment, use POST /card/:segment instead. Supports both multipart/form-data and direct binary upload (image/jpeg, image/png, image/webp). Maximum file size: 20MB. Supported formats: JPEG, PNG, WebP, HEIF, HEIC.
+        /// Identify one or more cards from an image. The segment (sport/category) of each card is detected automatically, so a single image may contain cards from different segments (e.g., baseball and basketball). To force a specific segment, use POST /card/:segment instead. Supports both multipart/form-data and direct binary upload (image/jpeg, image/png, image/webp). Maximum file size: 20MB. Supported formats: JPEG, PNG, WebP, HEIF, HEIC. Where a parallel variant is recognised it is returned in `card.parallelSuggestions` (beta): best match first, with a confidence tier on each entry where available.
         /// </remarks>
         /// <param name="image">The image file to analyze</param>
         /// <returns>Default Response</returns>
@@ -2726,7 +2744,7 @@ namespace CardSightAI.Generated
         /// Identifies a card from the submitted image for a specific segment (sport)
         /// </summary>
         /// <remarks>
-        /// Identify a card from an image for a specific segment (sport). The segment can be specified by UUID, name, or shortname (case-insensitive, e.g., "football", "basketball", "magic"). Supports both multipart/form-data and direct binary upload (image/jpeg, image/png, image/webp). Maximum file size: 20MB. Supported formats: JPEG, PNG, WebP, HEIF, HEIC.
+        /// Identify a card from an image for a specific segment (sport). The segment can be specified by UUID, name, or shortname (case-insensitive, e.g., "football", "basketball", "magic"). Supports both multipart/form-data and direct binary upload (image/jpeg, image/png, image/webp). Maximum file size: 20MB. Supported formats: JPEG, PNG, WebP, HEIF, HEIC. Where a parallel variant is recognised it is returned in `card.parallelSuggestions` (beta): best match first, with a confidence tier on each entry where available.
         /// </remarks>
         /// <param name="segment">Segment identifier — a UUID, segment name, or shortname (case-insensitive, e.g., "football", "baseball", "magic")</param>
         /// <param name="image">The image file to analyze</param>
@@ -3299,9 +3317,9 @@ namespace CardSightAI.Generated
         /// Search across cards, sets, releases, and parallels
         /// </summary>
         /// <remarks>
-        /// Global fuzzy search endpoint that searches across card names, set names, release names, parallel names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps", "1952 mickey mantle", or "refractor". Uses PostgreSQL full-text search combined with trigram similarity for typo-tolerant matching. Results are ranked by relevance and returned as a mixed list of cards, sets, releases, and parallels. Cards and sets that match a parallel name (e.g., "Refractor") are boosted in relevance and include the matching parallelName in the response. Slash notation is supported: append a standalone term like "/25" (e.g. "aaron judge /25") to hard-filter results to cards and parallels whose applicable parallel is serial-numbered to that value; matched results include the numberedTo field. Use the "type" parameter to filter to a specific entity type.
+        /// Global fuzzy search endpoint that searches across card names, set names, release names, parallel names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps", "1952 mickey mantle", or "refractor". Matching is typo-tolerant. Results are ranked by relevance and returned as a mixed list of cards, sets, releases, and parallels. Cards and sets that match a parallel name (e.g., "Refractor") are boosted in relevance and include the matching parallelName in the response. Slash notation is supported: append a standalone term like "/25" (e.g. "aaron judge /25") to hard-filter results to cards and parallels whose applicable parallel is serial-numbered to that value; matched results include the numberedTo field. Use the "type" parameter to filter to a specific entity type.
         /// </remarks>
-        /// <param name="q">Free-text search query. Searches across card names, set names, release names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps" or "1952 mickey mantle". Append a standalone slash term like "/25" to filter to cards and parallels whose parallel is numbered to that value (e.g. "aaron judge /25"). Minimum 2 characters.</param>
+        /// <param name="q">Free-text search query. Searches across card names, set names, release names, manufacturer names, and years simultaneously. Supports multi-word queries like "aaron judge topps" or "1952 mickey mantle". Append a standalone slash term like "/25" to filter to cards and parallels whose parallel is numbered to that value (e.g. "aaron judge /25"). Minimum 2 characters (after trimming surrounding whitespace).</param>
         /// <param name="take">Number of items to return per page. Minimum: 1, Maximum: 100, Default: 20. Use larger values for bulk data retrieval, smaller for responsive UIs.</param>
         /// <param name="skip">Number of items to skip (offset). Default: 0. Use for pagination: page 2 with take=20 would use skip=20, page 3 would use skip=40, etc.</param>
         /// <param name="type">Filter results to a specific entity type. When omitted, returns mixed results across all types.</param>
@@ -3444,7 +3462,27 @@ namespace CardSightAI.Generated
                             throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
+                        if (status_ == 408)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
                         if (status_ == 500)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 503)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
@@ -6250,7 +6288,7 @@ namespace CardSightAI.Generated
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
-        /// Search for parallels across sets and releases (free)
+        /// Search for parallels across sets and releases
         /// </summary>
         /// <remarks>
         /// Search for parallels by name and filter by release. Returns all sets containing the parallel with release information
@@ -6429,7 +6467,7 @@ namespace CardSightAI.Generated
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
-        /// Get detailed parallel information (free)
+        /// Get detailed parallel information
         /// </summary>
         /// <remarks>
         /// Retrieve detailed information about a specific Parallel, including set and release context. For partial parallels (isPartial=true), the response includes an array of Card IDs that have this Parallel.
@@ -13697,6 +13735,16 @@ namespace CardSightAI.Generated
                             throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
+                        if (status_ == 409)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
                         if (status_ == 429)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
@@ -13836,6 +13884,16 @@ namespace CardSightAI.Generated
                         }
                         else
                         if (status_ == 404)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 409)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
@@ -13995,6 +14053,16 @@ namespace CardSightAI.Generated
                             throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
+                        if (status_ == 409)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
                         if (status_ == 429)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
@@ -14143,6 +14211,16 @@ namespace CardSightAI.Generated
                             throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
+                        if (status_ == 409)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
                         if (status_ == 429)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
@@ -14282,6 +14360,16 @@ namespace CardSightAI.Generated
                         }
                         else
                         if (status_ == 404)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 409)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
@@ -14442,6 +14530,16 @@ namespace CardSightAI.Generated
                             throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
+                        if (status_ == 409)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
                         if (status_ == 429)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
@@ -14570,6 +14668,16 @@ namespace CardSightAI.Generated
                         }
                         else
                         if (status_ == 401)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 409)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
@@ -15681,18 +15789,183 @@ namespace CardSightAI.Generated
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
+        /// Get listing price time series (candlestick rollups) for a card
+        /// </summary>
+        /// <remarks>
+        /// Returns per-period descriptive statistics — mean, median, high, low, and count — aggregated over a card's marketplace listings, grouped into daily, weekly, or monthly buckets. Statistics are split by grade: `raw` holds candles for ungraded listings, and `graded` holds one candle series per grade, grouped by grading company — so graded and ungraded prices never blend into one candle range. Within each series, candles are further split by listing type, following the same bid/ask semantics as GET /pricing/{card_id}: auction candles summarize completed auction sales (the "bid" side), while fixed candles summarize Buy It Now asking prices (the "ask" side — listed prices, not necessarily completed sales). The parallel dimension is request-controlled: omit parallel_id and each grade's series blends all parallels of that grade; pass "null" for base-card-only candles or a UUID for one parallel. Use this to chart price trends over time. The viewpoint is `as_of_date` looking backward: the newest bucket is the one containing that date (default today, UTC) and the window extends back `periods` buckets (defaults: daily 90, weekly 52, monthly 24; `periods` above 365 is rejected, while weekly values above 156 and monthly values above 120 are clamped to those per-interval caps — the response echoes the effective values). Buckets, listing types, and grades with no listings are omitted rather than returned as zeros, and a card with no listings in the window returns an empty raw section and empty graded array as a success. A grouped outlier filter is applied over the whole window per grade/parallel variant — a listing is only ever judged against other listings of its own variant; per-type filtered counts are reported in each series' totals. Statistics are descriptive summaries of raw listings — not valuations.
+        /// </remarks>
+        /// <param name="interval">Rollup bucket size: daily = UTC calendar day, weekly = ISO week (Monday start), monthly = calendar month.</param>
+        /// <param name="card_id">Card UUID</param>
+        /// <param name="periods">How many buckets to look back. Defaults per interval when omitted: daily 90, weekly 52, monthly 24. Values above 365 are rejected; weekly values above 156 and monthly values above 120 are clamped to those per-interval caps, and the response echoes the effective value.</param>
+        /// <param name="as_of_date">Viewpoint date (UTC, YYYY-MM-DD): the newest bucket is the one containing this date and the window extends back `periods` buckets. Defaults to today (UTC).</param>
+        /// <param name="listing_type">Which listing-type series to compute. Stats are always split by type — this only restricts which types appear. auction=completed auction sales (bid side), fixed=Buy It Now asking prices (ask side, not necessarily completed sales), both=all</param>
+        /// <param name="parallel_id">Filter by parallel variant. Pass a UUID for a specific parallel, "null" for base card only, or omit for all variants.</param>
+        /// <param name="grade_id">Filter by grade. Pass a UUID for a specific grade, "null" for ungraded only, or omit for all grades.</param>
+        /// <returns>Default Response</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<TimeseriesResponse> GetCardPricingTimeseriesAsync(Interval interval, string card_id, int? periods = null, string as_of_date = null, Listing_type2? listing_type = null, string parallel_id = null, string grade_id = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        {
+            if (card_id == null)
+                throw new System.ArgumentNullException("card_id");
+
+            if (interval == null)
+                throw new System.ArgumentNullException("interval");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "v1/pricing/{card_id}/timeseries"
+                    urlBuilder_.Append("v1/pricing/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(card_id, System.Globalization.CultureInfo.InvariantCulture)));
+                    urlBuilder_.Append("/timeseries");
+                    urlBuilder_.Append('?');
+                    urlBuilder_.Append(System.Uri.EscapeDataString("interval")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(interval, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    if (periods != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("periods")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(periods, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (as_of_date != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("as_of_date")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(as_of_date, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (listing_type != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("listing_type")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(listing_type, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (parallel_id != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("parallel_id")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(parallel_id, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (grade_id != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("grade_id")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(grade_id, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<TimeseriesResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        if (status_ == 201)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<TimeseriesResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        if (status_ == 400)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 401)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 404)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 500)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <summary>
         /// Search price history by listing title
         /// </summary>
         /// <remarks>
         /// Free-text fuzzy search over marketplace listing titles for historical pricing — completed auction sales (the "bid" side) and Buy It Now asking prices (the "ask" side, not necessarily a completed sale). Surfaces raw listing data including listings that were never matched to a canonical card — useful for cards our matcher struggles with or sellers who use unusual titles. Returns a flat list of results ranked by title relevance; each result carries the canonical card it matched (when any). Supports filtering by listing type and time period.
         /// </remarks>
-        /// <param name="q">Free-text search over marketplace listing titles. Surfaces historical pricing — completed auction sales (bid) and Buy It Now asking prices (ask) — including listings never matched to a canonical card. 3–300 characters.</param>
+        /// <param name="q">Free-text search over marketplace listing titles. Surfaces historical pricing — completed auction sales (bid) and Buy It Now asking prices (ask) — including listings never matched to a canonical card. 2–300 characters.</param>
         /// <param name="period">Lookback period. Examples: "7d", "14d", "2w", "3m", "1y", "all". Omit or "all" for no time limit.</param>
         /// <param name="listing_type">Filter by listing type. auction=completed auction sales (bid side), fixed=Buy It Now asking prices (ask side), both=all</param>
         /// <param name="limit">Maximum number of records to return. Default 100, hard cap 500.</param>
         /// <returns>Default Response</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<PricingSearchResponse> SearchPricingByTitleAsync(string q, string period = null, Listing_type2? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<PricingSearchResponse> SearchPricingByTitleAsync(string q, string period = null, Listing_type3? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (q == null)
                 throw new System.ArgumentNullException("q");
@@ -15842,7 +16115,7 @@ namespace CardSightAI.Generated
         /// <param name="limit">Maximum number of records to return per card</param>
         /// <returns>Default Response</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<MarketplaceResponse> GetCardMarketplaceAsync(string card_id, string parallel_id = null, string grade_id = null, Listing_type3? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<MarketplaceResponse> GetCardMarketplaceAsync(string card_id, string parallel_id = null, string grade_id = null, Listing_type4? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (card_id == null)
                 throw new System.ArgumentNullException("card_id");
@@ -15989,12 +16262,12 @@ namespace CardSightAI.Generated
         /// <remarks>
         /// Free-text fuzzy search over marketplace listing titles for currently active listings. Surfaces raw listing data including listings that were never matched to a canonical card — useful for cards our matcher struggles with or sellers who use unusual titles. Returns a flat list of results ranked by title relevance; each result carries the canonical card it matched (when any). Supports filtering by listing type.
         /// </remarks>
-        /// <param name="q">Free-text search over marketplace listing titles. Surfaces active listings, including ones never matched to a canonical card. 3–300 characters.</param>
+        /// <param name="q">Free-text search over marketplace listing titles. Surfaces active listings, including ones never matched to a canonical card. 2–300 characters.</param>
         /// <param name="listing_type">Filter by listing type. auction=auctions, fixed=buy-it-now, both=all</param>
         /// <param name="limit">Maximum number of records to return. Default 100, hard cap 500.</param>
         /// <returns>Default Response</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<MarketplaceSearchResponse> SearchMarketplaceByTitleAsync(string q, Listing_type4? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<MarketplaceSearchResponse> SearchMarketplaceByTitleAsync(string q, Listing_type5? listing_type = null, int? limit = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (q == null)
                 throw new System.ArgumentNullException("q");
@@ -17503,8 +17776,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Purchase price (null to remove)
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("buyPrice", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public BuyPrice BuyPrice { get; set; }
+        [Newtonsoft.Json.JsonProperty("buyPrice", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string BuyPrice { get; set; }
 
         /// <summary>
         /// Purchase date (null to remove)
@@ -17515,14 +17788,14 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Listed selling price (null to remove)
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("sellPrice", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public SellPrice SellPrice { get; set; }
+        [Newtonsoft.Json.JsonProperty("sellPrice", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string SellPrice { get; set; }
 
         /// <summary>
         /// Actual sold price (null to remove)
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("soldPrice", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public SoldPrice SoldPrice { get; set; }
+        [Newtonsoft.Json.JsonProperty("soldPrice", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string SoldPrice { get; set; }
 
         /// <summary>
         /// Sale date (null to remove)
@@ -18716,7 +18989,7 @@ namespace CardSightAI.Generated
         public string Message { get; set; }
 
         /// <summary>
-        /// Current review status of the feedback
+        /// Current review status of the feedback. Newly submitted feedback starts as new; the remaining values are set by our review team. The values not_reviewed, fixed, wont_fix, duplicate, and need_info are deprecated and appear only on feedback submitted before August 2026.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("status", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -18832,39 +19105,7 @@ namespace CardSightAI.Generated
     public partial class CardSuggestionInput
     {
         /// <summary>
-        /// UUID of the suggested card
-        /// </summary>
-        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string Id { get; set; }
-
-        /// <summary>
-        /// Set name for the suggested card
-        /// </summary>
-        [Newtonsoft.Json.JsonProperty("setName", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string SetName { get; set; }
-
-        /// <summary>
-        /// Key-value field properties for the suggested card. Omitted when the card has no fields.
-        /// </summary>
-        [Newtonsoft.Json.JsonProperty("fields", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public FieldValuesInput Fields { get; set; }
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CardDetailsInput
-    {
-        /// <summary>
-        /// UUID of the identified card. Present only for exact card matches.
+        /// UUID of the card. Present only for exact card matches.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string Id { get; set; }
@@ -18949,19 +19190,184 @@ namespace CardSightAI.Generated
         public string VariationOf { get; set; }
 
         /// <summary>
-        /// Parallel variant info. Present only for exact card matches with an identified parallel.
+        /// Key-value field properties (e.g., HP, Rarity, Artist). May include a "CARD_LANGUAGE" entry with the ISO 639-1 code of the scanned card language (e.g., "ja"). Omitted when there are no fields.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("parallel", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public ParallelSummaryInput Parallel { get; set; }
+        [Newtonsoft.Json.JsonProperty("fields", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public FieldValuesInput Fields { get; set; }
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ParallelSuggestionInput
+    {
+        /// <summary>
+        /// Unique identifier for the parallel type. Format: UUID v4. This ID represents the parallel variant, not individual cards.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
+        public string Id { get; set; }
 
         /// <summary>
-        /// Key-value field properties (e.g., HP, Rarity, Artist). Omitted when the card has no fields.
+        /// Name of the parallel variant. Examples: "Gold Refractor", "Black Prizm", "Orange". Describes the visual variant or rarity tier.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Additional details about the parallel such as print run, special features, or visual description. May be null.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Description { get; set; }
+
+        /// <summary>
+        /// Present and true only if this parallel applies to specific cards (e.g., cards 1-400 of a 800-card set). Omitted if parallel applies to the entire set.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("isPartial", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool IsPartial { get; set; }
+
+        /// <summary>
+        /// Limited print run number for this parallel
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("numberedTo", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double NumberedTo { get; set; }
+
+        /// <summary>
+        /// Card UUIDs that have this parallel. Only present when isPartial is true.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("cards", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Cards { get; set; }
+
+        /// <summary>
+        /// How strongly this parallel is supported for the scanned card. Assessed per entry, independent of the entry's position in the list. Present when available while this field is in beta; a missing value means not assessed, not Low.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("confidence", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public ParallelSuggestionInputConfidence Confidence { get; set; }
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CardDetailsInput
+    {
+        /// <summary>
+        /// UUID of the card. Present only for exact card matches.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Id { get; set; }
+
+        /// <summary>
+        /// UUID of the segment. Present for both exact card and set-level matches.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("segmentId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string SegmentId { get; set; }
+
+        /// <summary>
+        /// UUID of the release. Present for both exact card and set-level matches.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("releaseId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string ReleaseId { get; set; }
+
+        /// <summary>
+        /// UUID of the set. Present for both exact card and set-level matches.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("setId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string SetId { get; set; }
+
+        /// <summary>
+        /// Release year from catalog (e.g., "2023", "1989")
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("year", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Year { get; set; }
+
+        /// <summary>
+        /// Card manufacturer from catalog (e.g., "Topps", "Panini", "Upper Deck")
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("manufacturer", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Manufacturer { get; set; }
+
+        /// <summary>
+        /// Release/product name from catalog (e.g., "Topps Chrome", "Prizm Basketball")
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("releaseName", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string ReleaseName { get; set; }
+
+        /// <summary>
+        /// Set name from catalog (e.g., "Base Set", "Rookie Variations")
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("setName", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string SetName { get; set; }
+
+        /// <summary>
+        /// Player or subject name. Present only for exact card matches.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Card number. Present only for exact card matches.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("number", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Number { get; set; }
+
+        /// <summary>
+        /// Descriptive text for the card when available. Omitted if no description exists.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Description { get; set; }
+
+        /// <summary>
+        /// Print run for numbered cards (e.g., 25 for a /25 card). Omitted if the card is not numbered.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("numberedTo", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [System.ComponentModel.DataAnnotations.Range(-9007199254740991D, 9007199254740991D)]
+        public long NumberedTo { get; set; }
+
+        /// <summary>
+        /// Notable attributes of the card (e.g., ["Rookie", "Autograph"]). Omitted if the card has no attributes.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("attributes", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Attributes { get; set; }
+
+        /// <summary>
+        /// UUID of the parent card when this card is a variation. Omitted if the card is not a variation.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("variationOf", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string VariationOf { get; set; }
+
+        /// <summary>
+        /// Key-value field properties (e.g., HP, Rarity, Artist). May include a "CARD_LANGUAGE" entry with the ISO 639-1 code of the scanned card language (e.g., "ja"). Omitted when there are no fields.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("fields", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public FieldValuesInput Fields { get; set; }
 
         /// <summary>
-        /// Alternative card matches when multiple reprints score similarly. Omitted when there are no suggestions.
+        /// (beta) Possible parallels for this card, each carrying a `confidence` tier when available. Order is the identification engine's ranking, best match first; `confidence` is the strength of evidence behind that individual entry and does not re-order the list. The two are independent, so a later entry may carry a higher confidence than an earlier one. Present whenever there is any parallel evidence: a single High-confidence entry when one parallel was identified, or several entries when more than one remains possible. Omitted when there is nothing to suggest.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("parallelSuggestions", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<ParallelSuggestionInput> ParallelSuggestions { get; set; }
+
+        /// <summary>
+        /// Possible alternative card matches, best match first. Each entry is a full card record with the same fields as `card`. Included only when `confidence` is Medium or Low; omitted for High-confidence identifications and when there are no alternatives.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("suggestions", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.Collections.Generic.ICollection<CardSuggestionInput> Suggestions { get; set; }
@@ -19651,8 +20057,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Short, URL-friendly key for the segment, usable in place of the name or UUID on segment-specific routes such as /v1/identify/card/{segment} (e.g. "magic" for "Magic: The Gathering"). Null when no shortname is set.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("shortname", Required = Newtonsoft.Json.Required.Always)]
-        public Shortname Shortname { get; set; }
+        [Newtonsoft.Json.JsonProperty("shortname", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Shortname { get; set; }
 
         /// <summary>
         /// Whether cards in this segment can be identified by the CardSightAI identification service.
@@ -21949,8 +22355,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Limited print run number for this parallel. Null for unlimited parallels.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("numberedTo", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public NumberedTo NumberedTo { get; set; }
+        [Newtonsoft.Json.JsonProperty("numberedTo", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double? NumberedTo { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -22071,7 +22477,7 @@ namespace CardSightAI.Generated
         public string Name { get; set; }
 
         /// <summary>
-        /// Relevance score combining full-text search rank and fuzzy similarity. Higher values indicate stronger matches. Results are sorted by this score descending.
+        /// Relevance score for ordering results. Higher values indicate stronger matches; results are sorted by this score descending. The value is opaque and order-only — its magnitude is not an absolute scale and may change between backend versions.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("relevance", Required = Newtonsoft.Json.Required.Always)]
         public double Relevance { get; set; }
@@ -22112,6 +22518,25 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("numberedTo", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [System.ComponentModel.DataAnnotations.Range(double.MinValue, 9007199254740991D)]
         public long NumberedTo { get; set; }
+
+        /// <summary>
+        /// Segment name for this result (e.g. "Baseball").
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("segmentName", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string SegmentName { get; set; }
+
+        /// <summary>
+        /// Printed card number. Present on card results when available.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("cardNumber", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string CardNumber { get; set; }
+
+        /// <summary>
+        /// Present on every result of the page only when close-spelling (fuzzy) matching engaged for this request: "exact" results matched the query directly and always sort before "fuzzy" results. Omitted entirely when fuzzy matching did not engage.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("matchKind", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public SearchResultInputMatchKind MatchKind { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -22212,8 +22637,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Detailed description of the grading company and its services
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.Always)]
-        public Description Description { get; set; }
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Description { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -22262,8 +22687,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Detailed description of what this grading type offers or represents
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.Always)]
-        public Description2 Description { get; set; }
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Description { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -22327,8 +22752,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// The condition descriptor for this grade (e.g., "GEM MINT", "MINT", "PRISTINE")
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.Always)]
-        public Condition Condition { get; set; }
+        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Condition { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -22504,8 +22929,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Listing title from marketplace
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Title Title { get; set; }
+        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Title { get; set; }
 
         /// <summary>
         /// Price in USD. For auctions this is the final sale price (the "bid" side); for fixed/Buy It Now this is the seller's asking price (the "ask" side) and is NOT necessarily a completed sale.
@@ -22517,8 +22942,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Date the listing ended, in ISO 8601 format
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("date", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Date Date { get; set; }
+        [Newtonsoft.Json.JsonProperty("date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Date { get; set; }
 
         /// <summary>
         /// Data source (e.g., "ebay")
@@ -22531,19 +22956,19 @@ namespace CardSightAI.Generated
         /// Listing type: "auction" = a completed auction sale (bid side), "fixed" = a Buy It Now asking price (ask side).
         /// </summary>
         [Newtonsoft.Json.JsonProperty("listing_type", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Listing_type5 Listing_type { get; set; }
+        public Listing_type6 Listing_type { get; set; }
 
         /// <summary>
         /// URL to the original listing
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Url Url { get; set; }
+        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Url { get; set; }
 
         /// <summary>
         /// Primary image URL for the listing
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Image_url Image_url { get; set; }
+        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Image_url { get; set; }
 
         /// <summary>
         /// Parallel variant UUID. Null for base card listings.
@@ -22554,8 +22979,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Parallel variant name. Null for base card listings.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_name Parallel_name { get; set; }
+        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Parallel_name { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -22595,31 +23020,31 @@ namespace CardSightAI.Generated
         /// Type of listing
         /// </summary>
         [Newtonsoft.Json.JsonProperty("listing_type", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Listing_type6 Listing_type { get; set; }
+        public Listing_type7 Listing_type { get; set; }
 
         /// <summary>
         /// URL to the listing
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Url2 Url { get; set; }
+        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Url { get; set; }
 
         /// <summary>
         /// Primary image URL
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Image_url2 Image_url { get; set; }
+        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Image_url { get; set; }
 
         /// <summary>
         /// Condition description from seller
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Condition2 Condition { get; set; }
+        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Condition { get; set; }
 
         /// <summary>
         /// Listing end date in ISO 8601 format
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("end_date", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public End_date End_date { get; set; }
+        [Newtonsoft.Json.JsonProperty("end_date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string End_date { get; set; }
 
         /// <summary>
         /// Number of bids (auctions only)
@@ -22636,8 +23061,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Parallel variant name. Null for base card listings.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_name2 Parallel_name { get; set; }
+        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Parallel_name { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -22714,8 +23139,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Card number in set
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("number", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Number Number { get; set; }
+        [Newtonsoft.Json.JsonProperty("number", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Number { get; set; }
 
         /// <summary>
         /// Set context
@@ -22827,8 +23252,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Date of most recent sale
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("last_sale_date", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Last_sale_date Last_sale_date { get; set; }
+        [Newtonsoft.Json.JsonProperty("last_sale_date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Last_sale_date { get; set; }
 
         /// <summary>
         /// Total records returned across all sections
@@ -23295,8 +23720,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Card number in set
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("number", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Number2 Number { get; set; }
+        [Newtonsoft.Json.JsonProperty("number", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Number { get; set; }
 
         /// <summary>
         /// Set context
@@ -23366,8 +23791,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Listing title from marketplace
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Title2 Title { get; set; }
+        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Title { get; set; }
 
         /// <summary>
         /// Price in USD. For auctions this is the final sale price (the "bid" side); for fixed/Buy It Now this is the seller's asking price (the "ask" side) and is NOT necessarily a completed sale.
@@ -23379,8 +23804,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Date the listing ended, in ISO 8601 format
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("date", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Date2 Date { get; set; }
+        [Newtonsoft.Json.JsonProperty("date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Date { get; set; }
 
         /// <summary>
         /// Data source (e.g., "ebay")
@@ -23393,19 +23818,19 @@ namespace CardSightAI.Generated
         /// Listing type: "auction" = a completed auction sale (bid side), "fixed" = a Buy It Now asking price (ask side).
         /// </summary>
         [Newtonsoft.Json.JsonProperty("listing_type", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Listing_type7 Listing_type { get; set; }
+        public Listing_type8 Listing_type { get; set; }
 
         /// <summary>
         /// URL to the original listing
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Url3 Url { get; set; }
+        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Url { get; set; }
 
         /// <summary>
         /// Primary image URL for the listing
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Image_url3 Image_url { get; set; }
+        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Image_url { get; set; }
 
         /// <summary>
         /// Parallel variant UUID. Null for base card listings.
@@ -23416,8 +23841,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Parallel variant name. Null for base card listings.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_name3 Parallel_name { get; set; }
+        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Parallel_name { get; set; }
 
         /// <summary>
         /// Canonical card this listing matched. Omitted when the listing is unmatched.
@@ -23469,31 +23894,31 @@ namespace CardSightAI.Generated
         /// Type of listing
         /// </summary>
         [Newtonsoft.Json.JsonProperty("listing_type", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Listing_type8 Listing_type { get; set; }
+        public Listing_type9 Listing_type { get; set; }
 
         /// <summary>
         /// URL to the listing
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Url4 Url { get; set; }
+        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Url { get; set; }
 
         /// <summary>
         /// Primary image URL
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Image_url4 Image_url { get; set; }
+        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Image_url { get; set; }
 
         /// <summary>
         /// Condition description from seller
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Condition3 Condition { get; set; }
+        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Condition { get; set; }
 
         /// <summary>
         /// Listing end date in ISO 8601 format
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("end_date", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public End_date2 End_date { get; set; }
+        [Newtonsoft.Json.JsonProperty("end_date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string End_date { get; set; }
 
         /// <summary>
         /// Number of bids (auctions only)
@@ -23510,8 +23935,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Parallel variant name. Null for base card listings.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_name4 Parallel_name { get; set; }
+        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Parallel_name { get; set; }
 
         /// <summary>
         /// Canonical card this listing matched. Omitted when the listing is unmatched.
@@ -23725,6 +24150,314 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CandleStatsInput
+    {
+        /// <summary>
+        /// Arithmetic mean listing price in USD for this bucket. For auction candles this aggregates final sale prices; for fixed candles it aggregates Buy It Now asking prices (not necessarily completed sales).
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("mean", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, double.MaxValue)]
+        public double Mean { get; set; }
+
+        /// <summary>
+        /// Median listing price in USD for this bucket
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("median", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, double.MaxValue)]
+        public double Median { get; set; }
+
+        /// <summary>
+        /// Highest listing price in USD in this bucket
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("high", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, double.MaxValue)]
+        public double High { get; set; }
+
+        /// <summary>
+        /// Lowest listing price in USD in this bucket
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("low", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, double.MaxValue)]
+        public double Low { get; set; }
+
+        /// <summary>
+        /// Number of listings in this bucket for this listing type (after outlier filtering)
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("count", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, 9007199254740991D)]
+        public long Count { get; set; }
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CandlePeriodInput
+    {
+        /// <summary>
+        /// Bucket start date (YYYY-MM-DD): the UTC calendar day, the Monday of the ISO week, or the 1st of the month, depending on interval.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("period_start", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Period_start { get; set; }
+
+        /// <summary>
+        /// Stats keyed by listing type; new listing types appear as additive keys. Currently "auction" (completed auction sales — the bid side) and "fixed" (Buy It Now asking prices — the ask side, not necessarily completed sales). A type with no listings in this bucket is absent from the map.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("types", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.IDictionary<string, CandleStatsInput> Types { get; set; } = new System.Collections.Generic.Dictionary<string, CandleStatsInput>();
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TimeseriesTypeTotalsInput
+    {
+        /// <summary>
+        /// Listings included across all candles for this listing type (after outlier filtering); equals the sum of the per-candle counts.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("total_count", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, 9007199254740991D)]
+        public long Total_count { get; set; }
+
+        /// <summary>
+        /// Listings removed by the outlier filter for this listing type. Pre-filter total = total_count + filtered_count.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("filtered_count", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, 9007199254740991D)]
+        public long Filtered_count { get; set; }
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TimeseriesQueryEchoInput
+    {
+        /// <summary>
+        /// Rollup bucket size applied
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("interval", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Interval { get; set; }
+
+        /// <summary>
+        /// Effective bucket count (the service applies per-interval defaults when omitted and clamps oversized values)
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("periods", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(double.MinValue, 9007199254740991D)]
+        public long Periods { get; set; }
+
+        /// <summary>
+        /// Effective viewpoint date (UTC) the window ends on
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("as_of_date", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string As_of_date { get; set; }
+
+        /// <summary>
+        /// Listing type filter applied
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("listing_type", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Listing_type { get; set; }
+
+        /// <summary>
+        /// Parallel UUID filter applied
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("parallel_id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public Parallel_id7 Parallel_id { get; set; }
+
+        /// <summary>
+        /// Grade UUID filter applied
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("grade_id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public Grade_id3 Grade_id { get; set; }
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RawTimeseriesSectionInput
+    {
+        /// <summary>
+        /// Chronological buckets computed from ungraded listings only, oldest first. A bucket with no listings in any requested type is omitted entirely; empty when the card has no ungraded listings in the window, or when the grade_id filter pins a specific grade (which excludes ungraded listings).
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("candles", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<CandlePeriodInput> Candles { get; set; } = new System.Collections.ObjectModel.Collection<CandlePeriodInput>();
+
+        /// <summary>
+        /// Whole-window counts for ungraded listings, keyed by listing type. A type with no listings across the window is omitted; a type can appear with total_count 0 when all of its listings were removed by the outlier filter.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("totals", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.IDictionary<string, TimeseriesTypeTotalsInput> Totals { get; set; } = new System.Collections.Generic.Dictionary<string, TimeseriesTypeTotalsInput>();
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TimeseriesGradeGroupInput
+    {
+        /// <summary>
+        /// Grade value (e.g., "10", "9.5")
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("grade_value", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Grade_value { get; set; }
+
+        /// <summary>
+        /// Grade UUID
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("grade_id", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$")]
+        public System.Guid Grade_id { get; set; }
+
+        /// <summary>
+        /// Chronological buckets computed from this grade's listings only, oldest first. A bucket with no listings in any requested type is omitted entirely.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("candles", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<CandlePeriodInput> Candles { get; set; } = new System.Collections.ObjectModel.Collection<CandlePeriodInput>();
+
+        /// <summary>
+        /// Whole-window counts for this grade, keyed by listing type. A type with no listings across the window is omitted; a type can appear with total_count 0 when all of its listings were removed by the outlier filter.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("totals", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.IDictionary<string, TimeseriesTypeTotalsInput> Totals { get; set; } = new System.Collections.Generic.Dictionary<string, TimeseriesTypeTotalsInput>();
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TimeseriesCompanyGroupInput
+    {
+        /// <summary>
+        /// Grading company name (e.g., "PSA")
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("company_name", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Company_name { get; set; }
+
+        /// <summary>
+        /// Grading company UUID
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("company_id", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$")]
+        public System.Guid Company_id { get; set; }
+
+        /// <summary>
+        /// Per-grade candle series for this company
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("grades", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<TimeseriesGradeGroupInput> Grades { get; set; } = new System.Collections.ObjectModel.Collection<TimeseriesGradeGroupInput>();
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TimeseriesResponseInput
+    {
+        /// <summary>
+        /// Card context information
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("card", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public PricingCardContextInput Card { get; set; } = new PricingCardContextInput();
+
+        /// <summary>
+        /// Echo of query parameters applied (effective values)
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("query", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public TimeseriesQueryEchoInput Query { get; set; } = new TimeseriesQueryEchoInput();
+
+        /// <summary>
+        /// Candle series computed from ungraded listings only. Always present; empty candles/totals when the card has no ungraded listings in the window, or when the grade_id filter pins a specific grade (which excludes ungraded listings — pass grade_id "null" for ungraded only).
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("raw", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public RawTimeseriesSectionInput Raw { get; set; } = new RawTimeseriesSectionInput();
+
+        /// <summary>
+        /// Per-grade candle series grouped by grading company, so graded and ungraded prices never blend into one candle range. Grades with no listings in the window are omitted; empty when the card has no graded listings in the window. When the grade_id filter pins a specific grade, this contains at most that one grade.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("graded", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<TimeseriesCompanyGroupInput> Graded { get; set; } = new System.Collections.ObjectModel.Collection<TimeseriesCompanyGroupInput>();
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ReleaseCalendarEntryInput
     {
         /// <summary>
@@ -23745,20 +24478,20 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Release year
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("year", Required = Newtonsoft.Json.Required.Always)]
-        public Year Year { get; set; }
+        [Newtonsoft.Json.JsonProperty("year", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Year { get; set; }
 
         /// <summary>
         /// Expected or actual release date (YYYY-MM-DD)
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("release_date", Required = Newtonsoft.Json.Required.Always)]
-        public Release_date Release_date { get; set; }
+        [Newtonsoft.Json.JsonProperty("release_date", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Release_date { get; set; }
 
         /// <summary>
         /// Date when pre-orders open (YYYY-MM-DD)
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("pre_order_date", Required = Newtonsoft.Json.Required.Always)]
-        public Pre_order_date Pre_order_date { get; set; }
+        [Newtonsoft.Json.JsonProperty("pre_order_date", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Pre_order_date { get; set; }
 
         /// <summary>
         /// Unique identifier of the associated market segment
@@ -23871,8 +24604,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Condition descriptor (e.g. "Gem Mint")
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Condition4 Condition { get; set; }
+        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Condition { get; set; }
 
         /// <summary>
         /// Count of unqualified graded examples
@@ -24815,8 +25548,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Purchase price (null to remove)
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("buyPrice", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public BuyPrice2 BuyPrice { get; set; }
+        [Newtonsoft.Json.JsonProperty("buyPrice", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string BuyPrice { get; set; }
 
         /// <summary>
         /// Purchase date (null to remove)
@@ -24827,14 +25560,14 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Listed selling price (null to remove)
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("sellPrice", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public SellPrice2 SellPrice { get; set; }
+        [Newtonsoft.Json.JsonProperty("sellPrice", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string SellPrice { get; set; }
 
         /// <summary>
         /// Actual sold price (null to remove)
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("soldPrice", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public SoldPrice2 SoldPrice { get; set; }
+        [Newtonsoft.Json.JsonProperty("soldPrice", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string SoldPrice { get; set; }
 
         /// <summary>
         /// Sale date (null to remove)
@@ -25776,7 +26509,7 @@ namespace CardSightAI.Generated
         public string Message { get; set; }
 
         /// <summary>
-        /// Current review status of the feedback
+        /// Current review status of the feedback. Newly submitted feedback starts as new; the remaining values are set by our review team. The values not_reviewed, fixed, wont_fix, duplicate, and need_info are deprecated and appear only on feedback submitted before August 2026.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("status", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -25856,30 +26589,7 @@ namespace CardSightAI.Generated
     public partial class CardSuggestion
     {
         /// <summary>
-        /// UUID of the suggested card
-        /// </summary>
-        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string Id { get; set; }
-
-        /// <summary>
-        /// Set name for the suggested card
-        /// </summary>
-        [Newtonsoft.Json.JsonProperty("setName", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string SetName { get; set; }
-
-        /// <summary>
-        /// Key-value field properties for the suggested card. Omitted when the card has no fields.
-        /// </summary>
-        [Newtonsoft.Json.JsonProperty("fields", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public FieldValues Fields { get; set; }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class CardDetails
-    {
-        /// <summary>
-        /// UUID of the identified card. Present only for exact card matches.
+        /// UUID of the card. Present only for exact card matches.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string Id { get; set; }
@@ -25964,19 +26674,166 @@ namespace CardSightAI.Generated
         public string VariationOf { get; set; }
 
         /// <summary>
-        /// Parallel variant info. Present only for exact card matches with an identified parallel.
+        /// Key-value field properties (e.g., HP, Rarity, Artist). May include a "CARD_LANGUAGE" entry with the ISO 639-1 code of the scanned card language (e.g., "ja"). Omitted when there are no fields.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("parallel", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public ParallelSummary Parallel { get; set; }
+        [Newtonsoft.Json.JsonProperty("fields", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public FieldValues Fields { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ParallelSuggestion
+    {
+        /// <summary>
+        /// Unique identifier for the parallel type. Format: UUID v4. This ID represents the parallel variant, not individual cards.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
+        public string Id { get; set; }
 
         /// <summary>
-        /// Key-value field properties (e.g., HP, Rarity, Artist). Omitted when the card has no fields.
+        /// Name of the parallel variant. Examples: "Gold Refractor", "Black Prizm", "Orange". Describes the visual variant or rarity tier.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Additional details about the parallel such as print run, special features, or visual description. May be null.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Description { get; set; }
+
+        /// <summary>
+        /// Present and true only if this parallel applies to specific cards (e.g., cards 1-400 of a 800-card set). Omitted if parallel applies to the entire set.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("isPartial", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool IsPartial { get; set; }
+
+        /// <summary>
+        /// Limited print run number for this parallel
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("numberedTo", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double NumberedTo { get; set; }
+
+        /// <summary>
+        /// Card UUIDs that have this parallel. Only present when isPartial is true.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("cards", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Cards { get; set; }
+
+        /// <summary>
+        /// How strongly this parallel is supported for the scanned card. Assessed per entry, independent of the entry's position in the list. Present when available while this field is in beta; a missing value means not assessed, not Low.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("confidence", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public ParallelSuggestionConfidence Confidence { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CardDetails
+    {
+        /// <summary>
+        /// UUID of the card. Present only for exact card matches.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Id { get; set; }
+
+        /// <summary>
+        /// UUID of the segment. Present for both exact card and set-level matches.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("segmentId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string SegmentId { get; set; }
+
+        /// <summary>
+        /// UUID of the release. Present for both exact card and set-level matches.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("releaseId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string ReleaseId { get; set; }
+
+        /// <summary>
+        /// UUID of the set. Present for both exact card and set-level matches.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("setId", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string SetId { get; set; }
+
+        /// <summary>
+        /// Release year from catalog (e.g., "2023", "1989")
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("year", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Year { get; set; }
+
+        /// <summary>
+        /// Card manufacturer from catalog (e.g., "Topps", "Panini", "Upper Deck")
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("manufacturer", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Manufacturer { get; set; }
+
+        /// <summary>
+        /// Release/product name from catalog (e.g., "Topps Chrome", "Prizm Basketball")
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("releaseName", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string ReleaseName { get; set; }
+
+        /// <summary>
+        /// Set name from catalog (e.g., "Base Set", "Rookie Variations")
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("setName", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string SetName { get; set; }
+
+        /// <summary>
+        /// Player or subject name. Present only for exact card matches.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// Card number. Present only for exact card matches.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("number", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Number { get; set; }
+
+        /// <summary>
+        /// Descriptive text for the card when available. Omitted if no description exists.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Description { get; set; }
+
+        /// <summary>
+        /// Print run for numbered cards (e.g., 25 for a /25 card). Omitted if the card is not numbered.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("numberedTo", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [System.ComponentModel.DataAnnotations.Range(-9007199254740991D, 9007199254740991D)]
+        public long NumberedTo { get; set; }
+
+        /// <summary>
+        /// Notable attributes of the card (e.g., ["Rookie", "Autograph"]). Omitted if the card has no attributes.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("attributes", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Attributes { get; set; }
+
+        /// <summary>
+        /// UUID of the parent card when this card is a variation. Omitted if the card is not a variation.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("variationOf", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string VariationOf { get; set; }
+
+        /// <summary>
+        /// Key-value field properties (e.g., HP, Rarity, Artist). May include a "CARD_LANGUAGE" entry with the ISO 639-1 code of the scanned card language (e.g., "ja"). Omitted when there are no fields.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("fields", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public FieldValues Fields { get; set; }
 
         /// <summary>
-        /// Alternative card matches when multiple reprints score similarly. Omitted when there are no suggestions.
+        /// (beta) Possible parallels for this card, each carrying a `confidence` tier when available. Order is the identification engine's ranking, best match first; `confidence` is the strength of evidence behind that individual entry and does not re-order the list. The two are independent, so a later entry may carry a higher confidence than an earlier one. Present whenever there is any parallel evidence: a single High-confidence entry when one parallel was identified, or several entries when more than one remains possible. Omitted when there is nothing to suggest.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("parallelSuggestions", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<ParallelSuggestion> ParallelSuggestions { get; set; }
+
+        /// <summary>
+        /// Possible alternative card matches, best match first. Each entry is a full card record with the same fields as `card`. Included only when `confidence` is Medium or Low; omitted for High-confidence identifications and when there are no alternatives.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("suggestions", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.Collections.Generic.ICollection<CardSuggestion> Suggestions { get; set; }
@@ -26495,8 +27352,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Short, URL-friendly key for the segment, usable in place of the name or UUID on segment-specific routes such as /v1/identify/card/{segment} (e.g. "magic" for "Magic: The Gathering"). Null when no shortname is set.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("shortname", Required = Newtonsoft.Json.Required.Always)]
-        public Shortname2 Shortname { get; set; }
+        [Newtonsoft.Json.JsonProperty("shortname", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Shortname { get; set; }
 
         /// <summary>
         /// Whether cards in this segment can be identified by the CardSightAI identification service.
@@ -28415,8 +29272,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Limited print run number for this parallel. Null for unlimited parallels.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("numberedTo", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public NumberedTo2 NumberedTo { get; set; }
+        [Newtonsoft.Json.JsonProperty("numberedTo", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public double? NumberedTo { get; set; }
 
     }
 
@@ -28501,7 +29358,7 @@ namespace CardSightAI.Generated
         public string Name { get; set; }
 
         /// <summary>
-        /// Relevance score combining full-text search rank and fuzzy similarity. Higher values indicate stronger matches. Results are sorted by this score descending.
+        /// Relevance score for ordering results. Higher values indicate stronger matches; results are sorted by this score descending. The value is opaque and order-only — its magnitude is not an absolute scale and may change between backend versions.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("relevance", Required = Newtonsoft.Json.Required.Always)]
         public double Relevance { get; set; }
@@ -28542,6 +29399,25 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("numberedTo", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [System.ComponentModel.DataAnnotations.Range(double.MinValue, 9007199254740991D)]
         public long NumberedTo { get; set; }
+
+        /// <summary>
+        /// Segment name for this result (e.g. "Baseball").
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("segmentName", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string SegmentName { get; set; }
+
+        /// <summary>
+        /// Printed card number. Present on card results when available.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("cardNumber", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string CardNumber { get; set; }
+
+        /// <summary>
+        /// Present on every result of the page only when close-spelling (fuzzy) matching engaged for this request: "exact" results matched the query directly and always sort before "fuzzy" results. Omitted entirely when fuzzy matching did not engage.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("matchKind", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public SearchResultMatchKind MatchKind { get; set; }
 
     }
 
@@ -28615,8 +29491,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Detailed description of the grading company and its services
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.Always)]
-        public Description3 Description { get; set; }
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Description { get; set; }
 
     }
 
@@ -28656,8 +29532,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Detailed description of what this grading type offers or represents
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.Always)]
-        public Description4 Description { get; set; }
+        [Newtonsoft.Json.JsonProperty("description", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Description { get; set; }
 
     }
 
@@ -28712,8 +29588,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// The condition descriptor for this grade (e.g., "GEM MINT", "MINT", "PRISTINE")
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.Always)]
-        public Condition5 Condition { get; set; }
+        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Condition { get; set; }
 
     }
 
@@ -28808,13 +29684,13 @@ namespace CardSightAI.Generated
         /// Filter by parallel variant UUID. null = base card only.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("parallel_id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_id7 Parallel_id { get; set; }
+        public Parallel_id8 Parallel_id { get; set; }
 
         /// <summary>
         /// Filter by grade UUID. null = ungraded only.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("grade_id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Grade_id3 Grade_id { get; set; }
+        public Grade_id4 Grade_id { get; set; }
 
         /// <summary>
         /// Lookback period. Examples: "7d", "14d", "2w", "3m", "1y", "all". Omit or "all" for no time limit.
@@ -28846,8 +29722,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Listing title from marketplace
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Title3 Title { get; set; }
+        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Title { get; set; }
 
         /// <summary>
         /// Price in USD. For auctions this is the final sale price (the "bid" side); for fixed/Buy It Now this is the seller's asking price (the "ask" side) and is NOT necessarily a completed sale.
@@ -28859,8 +29735,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Date the listing ended, in ISO 8601 format
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("date", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Date3 Date { get; set; }
+        [Newtonsoft.Json.JsonProperty("date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Date { get; set; }
 
         /// <summary>
         /// Data source (e.g., "ebay")
@@ -28873,31 +29749,31 @@ namespace CardSightAI.Generated
         /// Listing type: "auction" = a completed auction sale (bid side), "fixed" = a Buy It Now asking price (ask side).
         /// </summary>
         [Newtonsoft.Json.JsonProperty("listing_type", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Listing_type9 Listing_type { get; set; }
+        public Listing_type10 Listing_type { get; set; }
 
         /// <summary>
         /// URL to the original listing
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Url5 Url { get; set; }
+        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Url { get; set; }
 
         /// <summary>
         /// Primary image URL for the listing
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Image_url5 Image_url { get; set; }
+        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Image_url { get; set; }
 
         /// <summary>
         /// Parallel variant UUID. Null for base card listings.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("parallel_id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_id8 Parallel_id { get; set; }
+        public Parallel_id9 Parallel_id { get; set; }
 
         /// <summary>
         /// Parallel variant name. Null for base card listings.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_name5 Parallel_name { get; set; }
+        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Parallel_name { get; set; }
 
     }
 
@@ -28928,31 +29804,31 @@ namespace CardSightAI.Generated
         /// Type of listing
         /// </summary>
         [Newtonsoft.Json.JsonProperty("listing_type", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Listing_type10 Listing_type { get; set; }
+        public Listing_type11 Listing_type { get; set; }
 
         /// <summary>
         /// URL to the listing
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Url6 Url { get; set; }
+        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Url { get; set; }
 
         /// <summary>
         /// Primary image URL
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Image_url6 Image_url { get; set; }
+        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Image_url { get; set; }
 
         /// <summary>
         /// Condition description from seller
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Condition6 Condition { get; set; }
+        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Condition { get; set; }
 
         /// <summary>
         /// Listing end date in ISO 8601 format
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("end_date", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public End_date3 End_date { get; set; }
+        [Newtonsoft.Json.JsonProperty("end_date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string End_date { get; set; }
 
         /// <summary>
         /// Number of bids (auctions only)
@@ -28964,13 +29840,13 @@ namespace CardSightAI.Generated
         /// Parallel variant UUID. Null for base card listings.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("parallel_id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_id9 Parallel_id { get; set; }
+        public Parallel_id10 Parallel_id { get; set; }
 
         /// <summary>
         /// Parallel variant name. Null for base card listings.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_name6 Parallel_name { get; set; }
+        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Parallel_name { get; set; }
 
     }
 
@@ -29029,8 +29905,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Card number in set
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("number", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Number3 Number { get; set; }
+        [Newtonsoft.Json.JsonProperty("number", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Number { get; set; }
 
         /// <summary>
         /// Set context
@@ -29054,13 +29930,13 @@ namespace CardSightAI.Generated
         /// Parallel UUID filter applied
         /// </summary>
         [Newtonsoft.Json.JsonProperty("parallel_id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_id10 Parallel_id { get; set; }
+        public Parallel_id11 Parallel_id { get; set; }
 
         /// <summary>
         /// Grade UUID filter applied
         /// </summary>
         [Newtonsoft.Json.JsonProperty("grade_id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Grade_id4 Grade_id { get; set; }
+        public Grade_id5 Grade_id { get; set; }
 
         /// <summary>
         /// Period filter applied (pricing only)
@@ -29115,8 +29991,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Date of most recent sale
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("last_sale_date", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Last_sale_date2 Last_sale_date { get; set; }
+        [Newtonsoft.Json.JsonProperty("last_sale_date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Last_sale_date { get; set; }
 
         /// <summary>
         /// Total records returned across all sections
@@ -29475,8 +30351,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Card number in set
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("number", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Number4 Number { get; set; }
+        [Newtonsoft.Json.JsonProperty("number", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Number { get; set; }
 
         /// <summary>
         /// Set context
@@ -29528,8 +30404,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Listing title from marketplace
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Title4 Title { get; set; }
+        [Newtonsoft.Json.JsonProperty("title", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Title { get; set; }
 
         /// <summary>
         /// Price in USD. For auctions this is the final sale price (the "bid" side); for fixed/Buy It Now this is the seller's asking price (the "ask" side) and is NOT necessarily a completed sale.
@@ -29541,8 +30417,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Date the listing ended, in ISO 8601 format
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("date", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Date4 Date { get; set; }
+        [Newtonsoft.Json.JsonProperty("date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Date { get; set; }
 
         /// <summary>
         /// Data source (e.g., "ebay")
@@ -29555,31 +30431,31 @@ namespace CardSightAI.Generated
         /// Listing type: "auction" = a completed auction sale (bid side), "fixed" = a Buy It Now asking price (ask side).
         /// </summary>
         [Newtonsoft.Json.JsonProperty("listing_type", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Listing_type11 Listing_type { get; set; }
+        public Listing_type12 Listing_type { get; set; }
 
         /// <summary>
         /// URL to the original listing
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Url7 Url { get; set; }
+        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Url { get; set; }
 
         /// <summary>
         /// Primary image URL for the listing
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Image_url7 Image_url { get; set; }
+        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Image_url { get; set; }
 
         /// <summary>
         /// Parallel variant UUID. Null for base card listings.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("parallel_id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_id11 Parallel_id { get; set; }
+        public Parallel_id12 Parallel_id { get; set; }
 
         /// <summary>
         /// Parallel variant name. Null for base card listings.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_name7 Parallel_name { get; set; }
+        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Parallel_name { get; set; }
 
         /// <summary>
         /// Canonical card this listing matched. Omitted when the listing is unmatched.
@@ -29622,31 +30498,31 @@ namespace CardSightAI.Generated
         /// Type of listing
         /// </summary>
         [Newtonsoft.Json.JsonProperty("listing_type", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Listing_type12 Listing_type { get; set; }
+        public Listing_type13 Listing_type { get; set; }
 
         /// <summary>
         /// URL to the listing
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Url8 Url { get; set; }
+        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Url { get; set; }
 
         /// <summary>
         /// Primary image URL
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Image_url8 Image_url { get; set; }
+        [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Image_url { get; set; }
 
         /// <summary>
         /// Condition description from seller
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Condition7 Condition { get; set; }
+        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Condition { get; set; }
 
         /// <summary>
         /// Listing end date in ISO 8601 format
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("end_date", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public End_date4 End_date { get; set; }
+        [Newtonsoft.Json.JsonProperty("end_date", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string End_date { get; set; }
 
         /// <summary>
         /// Number of bids (auctions only)
@@ -29658,13 +30534,13 @@ namespace CardSightAI.Generated
         /// Parallel variant UUID. Null for base card listings.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("parallel_id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_id12 Parallel_id { get; set; }
+        public Parallel_id13 Parallel_id { get; set; }
 
         /// <summary>
         /// Parallel variant name. Null for base card listings.
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Parallel_name8 Parallel_name { get; set; }
+        [Newtonsoft.Json.JsonProperty("parallel_name", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Parallel_name { get; set; }
 
         /// <summary>
         /// Canonical card this listing matched. Omitted when the listing is unmatched.
@@ -29824,6 +30700,242 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CandleStats
+    {
+        /// <summary>
+        /// Arithmetic mean listing price in USD for this bucket. For auction candles this aggregates final sale prices; for fixed candles it aggregates Buy It Now asking prices (not necessarily completed sales).
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("mean", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, double.MaxValue)]
+        public double Mean { get; set; }
+
+        /// <summary>
+        /// Median listing price in USD for this bucket
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("median", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, double.MaxValue)]
+        public double Median { get; set; }
+
+        /// <summary>
+        /// Highest listing price in USD in this bucket
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("high", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, double.MaxValue)]
+        public double High { get; set; }
+
+        /// <summary>
+        /// Lowest listing price in USD in this bucket
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("low", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, double.MaxValue)]
+        public double Low { get; set; }
+
+        /// <summary>
+        /// Number of listings in this bucket for this listing type (after outlier filtering)
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("count", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, 9007199254740991D)]
+        public long Count { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class CandlePeriod
+    {
+        /// <summary>
+        /// Bucket start date (YYYY-MM-DD): the UTC calendar day, the Monday of the ISO week, or the 1st of the month, depending on interval.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("period_start", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Period_start { get; set; }
+
+        /// <summary>
+        /// Stats keyed by listing type; new listing types appear as additive keys. Currently "auction" (completed auction sales — the bid side) and "fixed" (Buy It Now asking prices — the ask side, not necessarily completed sales). A type with no listings in this bucket is absent from the map.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("types", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.IDictionary<string, CandleStats> Types { get; set; } = new System.Collections.Generic.Dictionary<string, CandleStats>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TimeseriesTypeTotals
+    {
+        /// <summary>
+        /// Listings included across all candles for this listing type (after outlier filtering); equals the sum of the per-candle counts.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("total_count", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, 9007199254740991D)]
+        public long Total_count { get; set; }
+
+        /// <summary>
+        /// Listings removed by the outlier filter for this listing type. Pre-filter total = total_count + filtered_count.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("filtered_count", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(0D, 9007199254740991D)]
+        public long Filtered_count { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TimeseriesQueryEcho
+    {
+        /// <summary>
+        /// Rollup bucket size applied
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("interval", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Interval { get; set; }
+
+        /// <summary>
+        /// Effective bucket count (the service applies per-interval defaults when omitted and clamps oversized values)
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("periods", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Range(double.MinValue, 9007199254740991D)]
+        public long Periods { get; set; }
+
+        /// <summary>
+        /// Effective viewpoint date (UTC) the window ends on
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("as_of_date", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string As_of_date { get; set; }
+
+        /// <summary>
+        /// Listing type filter applied
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("listing_type", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Listing_type { get; set; }
+
+        /// <summary>
+        /// Parallel UUID filter applied
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("parallel_id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public Parallel_id14 Parallel_id { get; set; }
+
+        /// <summary>
+        /// Grade UUID filter applied
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("grade_id", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public Grade_id6 Grade_id { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class RawTimeseriesSection
+    {
+        /// <summary>
+        /// Chronological buckets computed from ungraded listings only, oldest first. A bucket with no listings in any requested type is omitted entirely; empty when the card has no ungraded listings in the window, or when the grade_id filter pins a specific grade (which excludes ungraded listings).
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("candles", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<CandlePeriod> Candles { get; set; } = new System.Collections.ObjectModel.Collection<CandlePeriod>();
+
+        /// <summary>
+        /// Whole-window counts for ungraded listings, keyed by listing type. A type with no listings across the window is omitted; a type can appear with total_count 0 when all of its listings were removed by the outlier filter.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("totals", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.IDictionary<string, TimeseriesTypeTotals> Totals { get; set; } = new System.Collections.Generic.Dictionary<string, TimeseriesTypeTotals>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TimeseriesGradeGroup
+    {
+        /// <summary>
+        /// Grade value (e.g., "10", "9.5")
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("grade_value", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Grade_value { get; set; }
+
+        /// <summary>
+        /// Grade UUID
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("grade_id", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$")]
+        public System.Guid Grade_id { get; set; }
+
+        /// <summary>
+        /// Chronological buckets computed from this grade's listings only, oldest first. A bucket with no listings in any requested type is omitted entirely.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("candles", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<CandlePeriod> Candles { get; set; } = new System.Collections.ObjectModel.Collection<CandlePeriod>();
+
+        /// <summary>
+        /// Whole-window counts for this grade, keyed by listing type. A type with no listings across the window is omitted; a type can appear with total_count 0 when all of its listings were removed by the outlier filter.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("totals", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.IDictionary<string, TimeseriesTypeTotals> Totals { get; set; } = new System.Collections.Generic.Dictionary<string, TimeseriesTypeTotals>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TimeseriesCompanyGroup
+    {
+        /// <summary>
+        /// Grading company name (e.g., "PSA")
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("company_name", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Company_name { get; set; }
+
+        /// <summary>
+        /// Grading company UUID
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("company_id", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [System.ComponentModel.DataAnnotations.RegularExpression(@"^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$")]
+        public System.Guid Company_id { get; set; }
+
+        /// <summary>
+        /// Per-grade candle series for this company
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("grades", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<TimeseriesGradeGroup> Grades { get; set; } = new System.Collections.ObjectModel.Collection<TimeseriesGradeGroup>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class TimeseriesResponse
+    {
+        /// <summary>
+        /// Card context information
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("card", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public PricingCardContext Card { get; set; } = new PricingCardContext();
+
+        /// <summary>
+        /// Echo of query parameters applied (effective values)
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("query", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public TimeseriesQueryEcho Query { get; set; } = new TimeseriesQueryEcho();
+
+        /// <summary>
+        /// Candle series computed from ungraded listings only. Always present; empty candles/totals when the card has no ungraded listings in the window, or when the grade_id filter pins a specific grade (which excludes ungraded listings — pass grade_id "null" for ungraded only).
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("raw", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public RawTimeseriesSection Raw { get; set; } = new RawTimeseriesSection();
+
+        /// <summary>
+        /// Per-grade candle series grouped by grading company, so graded and ungraded prices never blend into one candle range. Grades with no listings in the window are omitted; empty when the card has no graded listings in the window. When the grade_id filter pins a specific grade, this contains at most that one grade.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("graded", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<TimeseriesCompanyGroup> Graded { get; set; } = new System.Collections.ObjectModel.Collection<TimeseriesCompanyGroup>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class ReleaseCalendarEntry
     {
         /// <summary>
@@ -29844,20 +30956,20 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Release year
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("year", Required = Newtonsoft.Json.Required.Always)]
-        public Year2 Year { get; set; }
+        [Newtonsoft.Json.JsonProperty("year", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Year { get; set; }
 
         /// <summary>
         /// Expected or actual release date (YYYY-MM-DD)
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("release_date", Required = Newtonsoft.Json.Required.Always)]
-        public Release_date2 Release_date { get; set; }
+        [Newtonsoft.Json.JsonProperty("release_date", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Release_date { get; set; }
 
         /// <summary>
         /// Date when pre-orders open (YYYY-MM-DD)
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("pre_order_date", Required = Newtonsoft.Json.Required.Always)]
-        public Pre_order_date2 Pre_order_date { get; set; }
+        [Newtonsoft.Json.JsonProperty("pre_order_date", Required = Newtonsoft.Json.Required.AllowNull)]
+        public string Pre_order_date { get; set; }
 
         /// <summary>
         /// Unique identifier of the associated market segment
@@ -29943,8 +31055,8 @@ namespace CardSightAI.Generated
         /// <summary>
         /// Condition descriptor (e.g. "Gem Mint")
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public Condition8 Condition { get; set; }
+        [Newtonsoft.Json.JsonProperty("condition", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Condition { get; set; }
 
         /// <summary>
         /// Count of unqualified graded examples
@@ -30905,6 +32017,21 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum Interval
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"daily")]
+        Daily = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"weekly")]
+        Weekly = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"monthly")]
+        Monthly = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public enum Listing_type2
     {
 
@@ -30936,6 +32063,21 @@ namespace CardSightAI.Generated
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public enum Listing_type4
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"auction")]
+        Auction = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"fixed")]
+        Fixed = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"both")]
+        Both = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum Listing_type5
     {
 
         [System.Runtime.Serialization.EnumMember(Value = @"auction")]
@@ -30992,52 +32134,7 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class BuyPrice
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class BuyDate
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SellPrice
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SoldPrice
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -31151,23 +32248,59 @@ namespace CardSightAI.Generated
     public enum FeedbackResponseInputStatus
     {
 
-        [System.Runtime.Serialization.EnumMember(Value = @"not_reviewed")]
-        Not_reviewed = 0,
+        [System.Runtime.Serialization.EnumMember(Value = @"new")]
+        New = 0,
 
         [System.Runtime.Serialization.EnumMember(Value = @"under_review")]
         Under_review = 1,
 
+        [System.Runtime.Serialization.EnumMember(Value = @"confirmed_bug")]
+        Confirmed_bug = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"enhancement_backlog")]
+        Enhancement_backlog = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"enhancement_planned")]
+        Enhancement_planned = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"released")]
+        Released = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"not_an_issue")]
+        Not_an_issue = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"closed")]
+        Closed = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"not_reviewed")]
+        Not_reviewed = 8,
+
         [System.Runtime.Serialization.EnumMember(Value = @"fixed")]
-        Fixed = 2,
+        Fixed = 9,
 
         [System.Runtime.Serialization.EnumMember(Value = @"wont_fix")]
-        Wont_fix = 3,
+        Wont_fix = 10,
 
         [System.Runtime.Serialization.EnumMember(Value = @"duplicate")]
-        Duplicate = 4,
+        Duplicate = 11,
 
         [System.Runtime.Serialization.EnumMember(Value = @"need_info")]
-        Need_info = 5,
+        Need_info = 12,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ParallelSuggestionInputConfidence
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"High")]
+        High = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Medium")]
+        Medium = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Low")]
+        Low = 2,
 
     }
 
@@ -31210,21 +32343,6 @@ namespace CardSightAI.Generated
 
         [System.Runtime.Serialization.EnumMember(Value = @"assistant")]
         Assistant = 1,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Shortname
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
 
     }
 
@@ -31374,21 +32492,6 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class NumberedTo
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class sets
     {
         /// <summary>
@@ -31482,47 +32585,14 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Description
+    public enum SearchResultInputMatchKind
     {
 
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+        [System.Runtime.Serialization.EnumMember(Value = @"exact")]
+        Exact = 0,
 
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Description2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Condition
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
+        [System.Runtime.Serialization.EnumMember(Value = @"fuzzy")]
+        Fuzzy = 1,
 
     }
 
@@ -31572,67 +32642,7 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Title
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Date
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Listing_type5
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Url
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Image_url
+    public partial class Listing_type6
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -31662,21 +32672,6 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Parallel_name
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class Price
     {
 
@@ -31692,67 +32687,7 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Listing_type6
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Url2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Image_url2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Condition2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class End_date
+    public partial class Listing_type7
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -31783,36 +32718,6 @@ namespace CardSightAI.Generated
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class Parallel_id3
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Parallel_name2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Number
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -31858,21 +32763,6 @@ namespace CardSightAI.Generated
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class Grade_id2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Last_sale_date
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -31980,82 +32870,7 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Number2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Title2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Date2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Listing_type7
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Url3
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Image_url3
+    public partial class Listing_type8
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -32085,21 +32900,6 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Parallel_name3
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class Price2
     {
 
@@ -32115,67 +32915,7 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Listing_type8
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Url4
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Image_url4
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Condition3
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class End_date2
+    public partial class Listing_type9
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -32220,7 +32960,7 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Parallel_name4
+    public partial class Parallel_id7
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -32235,37 +32975,7 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Year
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Release_date
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Pre_order_date
+    public partial class Grade_id3
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -32296,21 +33006,6 @@ namespace CardSightAI.Generated
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class Manufacturer_id
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Condition4
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -32367,52 +33062,7 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class BuyPrice2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class BuyDate2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SellPrice2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SoldPrice2
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -32526,23 +33176,59 @@ namespace CardSightAI.Generated
     public enum FeedbackResponseStatus
     {
 
-        [System.Runtime.Serialization.EnumMember(Value = @"not_reviewed")]
-        Not_reviewed = 0,
+        [System.Runtime.Serialization.EnumMember(Value = @"new")]
+        New = 0,
 
         [System.Runtime.Serialization.EnumMember(Value = @"under_review")]
         Under_review = 1,
 
+        [System.Runtime.Serialization.EnumMember(Value = @"confirmed_bug")]
+        Confirmed_bug = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"enhancement_backlog")]
+        Enhancement_backlog = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"enhancement_planned")]
+        Enhancement_planned = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"released")]
+        Released = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"not_an_issue")]
+        Not_an_issue = 6,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"closed")]
+        Closed = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"not_reviewed")]
+        Not_reviewed = 8,
+
         [System.Runtime.Serialization.EnumMember(Value = @"fixed")]
-        Fixed = 2,
+        Fixed = 9,
 
         [System.Runtime.Serialization.EnumMember(Value = @"wont_fix")]
-        Wont_fix = 3,
+        Wont_fix = 10,
 
         [System.Runtime.Serialization.EnumMember(Value = @"duplicate")]
-        Duplicate = 4,
+        Duplicate = 11,
 
         [System.Runtime.Serialization.EnumMember(Value = @"need_info")]
-        Need_info = 5,
+        Need_info = 12,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum ParallelSuggestionConfidence
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"High")]
+        High = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Medium")]
+        Medium = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"Low")]
+        Low = 2,
 
     }
 
@@ -32585,21 +33271,6 @@ namespace CardSightAI.Generated
 
         [System.Runtime.Serialization.EnumMember(Value = @"assistant")]
         Assistant = 1,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Shortname2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
 
     }
 
@@ -32722,21 +33393,6 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class NumberedTo2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class sets3
     {
         /// <summary>
@@ -32821,367 +33477,19 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Description3
+    public enum SearchResultMatchKind
     {
 
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+        [System.Runtime.Serialization.EnumMember(Value = @"exact")]
+        Exact = 0,
 
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Description4
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Condition5
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Parallel_id7
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Grade_id3
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum BulkPricingRequestListing_type
-    {
-
-        [System.Runtime.Serialization.EnumMember(Value = @"auction")]
-        Auction = 0,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"fixed")]
-        Fixed = 1,
-
-        [System.Runtime.Serialization.EnumMember(Value = @"both")]
-        Both = 2,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Title3
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Date3
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Listing_type9
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Url5
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Image_url5
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
+        [System.Runtime.Serialization.EnumMember(Value = @"fuzzy")]
+        Fuzzy = 1,
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class Parallel_id8
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Parallel_name5
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Price3
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Listing_type10
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Url6
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Image_url6
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Condition6
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class End_date3
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Bid_count3
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Parallel_id9
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Parallel_name6
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Number3
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Parallel3
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Parallel_id10
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -33211,7 +33519,142 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Last_sale_date2
+    public enum BulkPricingRequestListing_type
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"auction")]
+        Auction = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"fixed")]
+        Fixed = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"both")]
+        Both = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Listing_type10
+    {
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Parallel_id9
+    {
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Price3
+    {
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Listing_type11
+    {
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Bid_count3
+    {
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Parallel_id10
+    {
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Parallel3
+    {
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Parallel_id11
+    {
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Grade_id5
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -33301,217 +33744,7 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Number4
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Title4
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Date4
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Listing_type11
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Url7
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Image_url7
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Parallel_id11
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Parallel_name7
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Price4
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class Listing_type12
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Url8
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Image_url8
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Condition7
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class End_date4
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Bid_count4
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -33541,7 +33774,7 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Parallel_name8
+    public partial class Price4
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -33556,7 +33789,7 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Year2
+    public partial class Listing_type13
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -33571,7 +33804,7 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Release_date2
+    public partial class Bid_count4
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -33586,7 +33819,37 @@ namespace CardSightAI.Generated
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Pre_order_date2
+    public partial class Parallel_id13
+    {
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Parallel_id14
+    {
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class Grade_id6
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -33617,21 +33880,6 @@ namespace CardSightAI.Generated
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class Manufacturer_id2
-    {
-
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Condition8
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;

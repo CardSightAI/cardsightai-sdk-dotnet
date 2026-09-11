@@ -47,7 +47,7 @@ namespace CardSightAI.Configuration
         /// <summary>
         /// User agent string for API requests
         /// </summary>
-        public string UserAgent { get; set; } = $"CardSightAI-DotNet-SDK/2.1.0 (.NET/{Environment.Version})";
+        public string UserAgent { get; set; } = $"CardSightAI-DotNet-SDK/3.0.0 (.NET/{Environment.Version})";
 
         /// <summary>
         /// Validates the configuration options
