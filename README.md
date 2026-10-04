@@ -8,7 +8,7 @@
 **Official .NET SDK for [CardSight AI](https://cardsight.ai) REST API**
 
 The most comprehensive baseball card identification and collection management platform.
-**12M+ Cards** • **AI-Powered Recognition** • **Free Tier Available**
+**15M+ Cards** • **AI-Powered Recognition** • **Free Tier Available**
 
 **Quick Links:** [Getting Started](#getting-started) • [Installation](#installation) • [Examples](#usage-examples) • [API Documentation](https://api.cardsight.ai/documentation) • [Support](#support)
 
@@ -19,7 +19,7 @@ The most comprehensive baseball card identification and collection management pl
 Anything you build with sports or trading cards — a collection app, a pricing tool, a marketplace, or an AI agent that reasons over cards — starts with reliable card data. CardSight AI provides it through a single REST API that this SDK wraps end to end:
 
 - **Recognize any card from a photo** — AI-powered multi-card detection with confidence levels, plus parallel, serial-numbering, and graded-slab detection.
-- **12M+ cards across every category** — sports (baseball, football, basketball, and more) and trading card games (Pokémon, Magic: The Gathering, Yu-Gi-Oh!), unified under one flexible metadata model so you never have to branch per game.
+- **15M+ cards across every category** — sports (baseball, football, basketball, and more) and trading card games (Pokémon, Magic: The Gathering, Yu-Gi-Oh!), unified under one flexible metadata model so you never have to branch per game.
 - **Real market data built in** — completed-sales pricing, active marketplace listings, and graded population reports, looked up by card ID or by free-text listing title.
 - **Built for developers and AI agents** — every endpoint returns strongly-typed, structured C# objects, ideal both for production apps and for grounding LLMs and AI agents in accurate card data, with a natural-language query endpoint for agentic use.
 - **Complete and always current** — 100% API coverage, generated from the OpenAPI spec so it never drifts, and a free tier to start (no credit card required).
