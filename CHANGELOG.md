@@ -25,6 +25,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Nothing yet
 
+## [3.1.0] - 2026-10-04
+
+### Added
+- **CardMagic: listing-ready card images from a photo** — new `CardMagic` tag and `ProcessCardImageAsync(...)` (`POST /v1/cardmagic/process`). Upload a phone photo of one or more cards and get each card back as a clean, straightened image. Because the response is binary, the method returns a `FileResponse` (`IDisposable`: `Stream`, `Headers`, `StatusCode`) instead of a DTO.
+  - Signature: `ProcessCardImageAsync(Mode? mode = null, double? paddingPercent = null, string paddingFill = null, AutoLevels? autoLevels = null, OutputFormat? outputFormat = null, int? longEdge = null, Corners? corners = null, FileParameter image = null, CancellationToken cancellationToken = default)`. All query options are optional; `image` is required in practice (a `null` image throws `ArgumentNullException`). Use named arguments.
+  - Options: `mode` (`Mode.Process` straightens and squares each card, the default; `Mode.Crop` trims each card as it appears), `paddingPercent` (0–50, default 5), `paddingFill` (`"background"` or `"#RRGGBB"`), `autoLevels` (`AutoLevels.True` default / `AutoLevels.False`), `outputFormat` (`OutputFormat.Jpeg` default / `OutputFormat.Png`), `longEdge` (32–2100 px), `corners` (`Corners.True` adds close-ups of each card's four corners plus a combined sheet).
+  - Input: pass the photo as a `FileParameter`; it is sent as `multipart/form-data` with the file in the `image` field. Set the part content type to match the photo (`image/jpeg`, `image/png`, `image/webp`, `image/heic` or `image/heif`). Max 20 MB and 8192 px per side. The generated client sends the multipart form only; the raw `image/*` request-body form is not exposed.
+  - Output: one card returns `image/jpeg` or `image/png` (per `outputFormat`); two or more cards, or `corners=true` even for one card, return `application/zip` containing `card_0.<ext>`, `card_1.<ext>`, and so on. The response headers are `X-CardMagic-Count` (cards in the photo), plus `X-CardMagic-Width` and `X-CardMagic-Height` (single image only, padding included). The content type is available as the `Content-Type` entry in `Headers`.
+  - Errors: non-success statuses throw `ApiException<ErrorResponse>` (`400`, `401`, `408`, `422`, `429`, `500`, `503`). A photo with no card is `422` with `Result.Code == "NO_CARD_FOUND"`.
+  - New enums in `CardSightAI.Generated`: `Mode`, `AutoLevels`, `OutputFormat`, `Corners`.
+
+  ```csharp
+  using System.IO.Compression;
+  using CardSightAI;
+  using CardSightAI.Generated;
+
+  using var client = new CardSightAIClient("your_api_key");
+
+  using var photo = File.OpenRead("photo.jpg");
+  var image = new FileParameter(photo, "photo.jpg", "image/jpeg");   // image/jpeg, png, webp, heic or heif
+
+  try
+  {
+      using FileResponse response = await client.Api.ProcessCardImageAsync(
+          mode: Mode.Process,
+          outputFormat: OutputFormat.Jpeg,
+          longEdge: 1200,
+          image: image);
+
+      // Header names keep the server's casing (often lowercase), so look them up case-insensitively
+      string? Header(string name) => response.Headers
+          .FirstOrDefault(h => string.Equals(h.Key, name, StringComparison.OrdinalIgnoreCase))
+          .Value?.FirstOrDefault();
+
+      var count = int.Parse(Header("X-CardMagic-Count") ?? "0");
+
+      if (Header("Content-Type")?.StartsWith("application/zip") == true)
+      {
+          // Two or more cards (or corners: Corners.True): card_0.jpg, card_1.jpg, ...
+          using var zip = new ZipArchive(response.Stream, ZipArchiveMode.Read);
+          foreach (var entry in zip.Entries)
+              entry.ExtractToFile(Path.Combine("out", entry.Name), overwrite: true);
+          Console.WriteLine($"{count} cards extracted");
+      }
+      else
+      {
+          // One card: image/jpeg or image/png, pixel size in X-CardMagic-Width / X-CardMagic-Height
+          using var file = File.Create(Path.Combine("out", "card.jpg"));
+          await response.Stream.CopyToAsync(file);
+          Console.WriteLine($"1 card, {Header("X-CardMagic-Width")}x{Header("X-CardMagic-Height")} px");
+      }
+  }
+  catch (ApiException<ErrorResponse> ex) when (ex.StatusCode == 422 && ex.Result.Code == "NO_CARD_FOUND")
+  {
+      Console.WriteLine("No card found in the photo");
+  }
+  ```
+- **Detection counts on identification** — `IdentifyCardResponse` gained `DetectedCount` (cards found in the image, whether or not they were identified; also present on unsuccessful identifications) and `IdentifiedCount` (detections whose `Card` matched the catalog). Both are `long` and read `0` when the API omits them, so `DetectedCount - IdentifiedCount` is the number of cards found but not identified.
+- **Slab certification number** — `SlabGradingDetail` gained `CertNumber` (`string`), the certification number read from the slab label; `null` when it could not be read.
+- **Card variations** — `CardSummary`, `CardWithOptionalParallel`, `DetailedCard`, and `DetailedCardResponse` gained `Variations` (`ICollection<string>`): the UUIDs of cards that are variations of that card. `null` when the card has no variations.
+
+### Changed
+- **Unidentified cards in graded slabs are now returned.** A card inside a graded slab that cannot be identified is now returned as a detection with an empty `Card` plus its `Grading`. Code that assumes every detection with `Grading` has a matched card should check for an exact or set-level match first (for example `!string.IsNullOrEmpty(detection.Card.Id)`, or compare `IdentifiedCount` to `DetectedCount`). No schema change.
+- Bumped the SDK user-agent to `CardSightAI-DotNet-SDK/3.1.0`.
+- Regenerated the NSwag client from the latest OpenAPI spec (80 paths, 364 schemas, 19 tags). The change is additive: no endpoints, parameters, or DTOs were removed or renamed.
+
 ## [3.0.0] - 2026-09-11
 
 ### Breaking
@@ -116,7 +182,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Known Issues
 - The generated client contains some duplicate nested object classes (e.g., Prices2-12) due to inline schema definitions in the OpenAPI specification. This does not affect functionality, and these duplicates will be resolved in future API updates
 
-[Unreleased]: https://github.com/CardSightAI/cardsightai-sdk-dotnet/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/CardSightAI/cardsightai-sdk-dotnet/compare/v3.1.0...HEAD
+[3.1.0]: https://github.com/CardSightAI/cardsightai-sdk-dotnet/compare/v3.0.0...v3.1.0
+[3.0.0]: https://github.com/CardSightAI/cardsightai-sdk-dotnet/compare/v2.1.0...v3.0.0
 [2.1.0]: https://github.com/CardSightAI/cardsightai-sdk-dotnet/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/CardSightAI/cardsightai-sdk-dotnet/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/CardSightAI/cardsightai-sdk-dotnet/releases/tag/v1.0.0

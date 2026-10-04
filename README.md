@@ -43,6 +43,7 @@ All endpoints are reached through the typed `client.Api` surface. Methods follow
 |---------|-------------|-----------------|
 | **Card Identification** | Identify multiple cards from images using AI; free pre-flight set-identifiability lookups | `IdentifyCardAsync`, `IdentifyCardBySegmentAsync`, `ListIdentifiableSetsAsync`, `CheckSetIdentifiableAsync` |
 | **Card Detection** | Check whether trading cards are present in an image | `DetectCardAsync` |
+| **CardMagic** | Turn a phone photo of one or more cards into clean, listing-ready card images (single image or a zip of cards, optional corner close-ups) | `ProcessCardImageAsync` |
 | **Catalog Search** | Fuzzy search across cards, sets, releases, parallels | `SearchCatalogAsync`, `GetCardsAsync` |
 | **Random Catalog** | Pack-opening simulations with parallel odds | `GetRandomCardsAsync`, `GetRandomSetsAsync`, `GetRandomReleasesAsync` |
 | **Collections** | Manage owned card collections with analytics | `CreateCollectionAsync`, `AddCollectionCardsAsync`, `GetCollectionAnalyticsAsync` |
@@ -77,7 +78,7 @@ Install-Package CardSightAI
 
 ```xml
 <!-- PackageReference -->
-<PackageReference Include="CardSightAI" Version="3.0.0" />
+<PackageReference Include="CardSightAI" Version="3.1.0" />
 ```
 
 ## Getting Started

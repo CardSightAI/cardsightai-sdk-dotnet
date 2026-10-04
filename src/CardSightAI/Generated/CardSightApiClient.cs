@@ -112,6 +112,25 @@ namespace CardSightAI.Generated
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <summary>
+        /// Create listing-ready card images from a photo
+        /// </summary>
+        /// <remarks>
+        /// Upload a phone photo of one or more trading cards and get each card back as a clean, listing-ready image. Best results come from raw cards; cards in toploaders or grading-company slabs may crop poorly. mode=process (default) returns each card straightened and squared up at standard trading-card proportions, as if it had been scanned; mode=crop returns each card as it appears in the photo, trimmed to the card. Padding, fill, auto-levels and the returned image size (longEdge) are adjustable. One card returns the image directly (image/jpeg or image/png per outputFormat) with its pixel size in the X-CardMagic-Width and X-CardMagic-Height headers. Two or more cards return application/zip containing card_0.&lt;ext&gt;, card_1.&lt;ext&gt;, ... in reading order (top to bottom, then left to right). corners=true adds close-ups of each card's four corners and a sheet combining them, and the response is then always application/zip, even for one card: card_N.&lt;ext&gt; is followed by card_N_top-left.&lt;ext&gt;, card_N_top-right.&lt;ext&gt;, card_N_bottom-right.&lt;ext&gt;, card_N_bottom-left.&lt;ext&gt; and card_N_corners.&lt;ext&gt;. If no card is found the response is 422 NO_CARD_FOUND. Accepts multipart/form-data or a direct binary body (image/jpeg, image/png, image/webp, image/heic). Maximum upload 20MB and 8192px per side. Send the original photo (including its orientation flag), not a downscaled or rotated copy.
+        /// </remarks>
+        /// <param name="mode">process (default): each card straightened and squared up at standard trading-card proportions, as if scanned. crop: each card as it appears in the photo, trimmed to the card.</param>
+        /// <param name="paddingPercent">Margin around the card as a percent of the card size on each side, 0 to 50. Default 5.</param>
+        /// <param name="paddingFill">What fills the margin: "background" (the real surroundings, default) or a solid #RRGGBB color.</param>
+        /// <param name="autoLevels">Restore contrast and remove color cast (default true). Set false when the photo's own color is what matters.</param>
+        /// <param name="outputFormat">Encoding of the returned card image(s). Default jpeg.</param>
+        /// <param name="longEdge">Size of every returned image as the length of its long side in pixels, padding included, 32 to 2100. Omit it for the photo's native size.</param>
+        /// <param name="corners">Add close-ups of each card's four corners for judging condition (default false). Each close-up is 600x600 and shows 14 mm of the card from the corner plus 2.5 mm beyond it, with a light 1 mm grid (heavier every 5 mm; the grid assumes a standard 2.5 x 3.5 in card), in the photo's original color. A 1210x1210 sheet shows all four as they sit on the card. The response is then always application/zip, even for one card.</param>
+        /// <param name="image">The image file to analyze</param>
+        /// <returns>One card: the processed image as image/jpeg or image/png (per outputFormat), with its pixel size in the X-CardMagic-Width and X-CardMagic-Height headers. Two or more cards: application/zip containing card_0.&lt;ext&gt;, card_1.&lt;ext&gt;, ... in reading order. With corners=true the response is always application/zip, even for one card, and each card_N.&lt;ext&gt; is followed by card_N_top-left.&lt;ext&gt;, card_N_top-right.&lt;ext&gt;, card_N_bottom-right.&lt;ext&gt;, card_N_bottom-left.&lt;ext&gt; and card_N_corners.&lt;ext&gt; (all four on one sheet).</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<FileResponse> ProcessCardImageAsync(Mode? mode = null, double? paddingPercent = null, string paddingFill = null, AutoLevels? autoLevels = null, OutputFormat? outputFormat = null, int? longEdge = null, Corners? corners = null, FileParameter image = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <summary>
         /// Get comprehensive catalog statistics
         /// </summary>
         /// <remarks>
@@ -3140,6 +3159,204 @@ namespace CardSightAI.Generated
                         }
                         else
                         if (status_ == 500)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <summary>
+        /// Create listing-ready card images from a photo
+        /// </summary>
+        /// <remarks>
+        /// Upload a phone photo of one or more trading cards and get each card back as a clean, listing-ready image. Best results come from raw cards; cards in toploaders or grading-company slabs may crop poorly. mode=process (default) returns each card straightened and squared up at standard trading-card proportions, as if it had been scanned; mode=crop returns each card as it appears in the photo, trimmed to the card. Padding, fill, auto-levels and the returned image size (longEdge) are adjustable. One card returns the image directly (image/jpeg or image/png per outputFormat) with its pixel size in the X-CardMagic-Width and X-CardMagic-Height headers. Two or more cards return application/zip containing card_0.&lt;ext&gt;, card_1.&lt;ext&gt;, ... in reading order (top to bottom, then left to right). corners=true adds close-ups of each card's four corners and a sheet combining them, and the response is then always application/zip, even for one card: card_N.&lt;ext&gt; is followed by card_N_top-left.&lt;ext&gt;, card_N_top-right.&lt;ext&gt;, card_N_bottom-right.&lt;ext&gt;, card_N_bottom-left.&lt;ext&gt; and card_N_corners.&lt;ext&gt;. If no card is found the response is 422 NO_CARD_FOUND. Accepts multipart/form-data or a direct binary body (image/jpeg, image/png, image/webp, image/heic). Maximum upload 20MB and 8192px per side. Send the original photo (including its orientation flag), not a downscaled or rotated copy.
+        /// </remarks>
+        /// <param name="mode">process (default): each card straightened and squared up at standard trading-card proportions, as if scanned. crop: each card as it appears in the photo, trimmed to the card.</param>
+        /// <param name="paddingPercent">Margin around the card as a percent of the card size on each side, 0 to 50. Default 5.</param>
+        /// <param name="paddingFill">What fills the margin: "background" (the real surroundings, default) or a solid #RRGGBB color.</param>
+        /// <param name="autoLevels">Restore contrast and remove color cast (default true). Set false when the photo's own color is what matters.</param>
+        /// <param name="outputFormat">Encoding of the returned card image(s). Default jpeg.</param>
+        /// <param name="longEdge">Size of every returned image as the length of its long side in pixels, padding included, 32 to 2100. Omit it for the photo's native size.</param>
+        /// <param name="corners">Add close-ups of each card's four corners for judging condition (default false). Each close-up is 600x600 and shows 14 mm of the card from the corner plus 2.5 mm beyond it, with a light 1 mm grid (heavier every 5 mm; the grid assumes a standard 2.5 x 3.5 in card), in the photo's original color. A 1210x1210 sheet shows all four as they sit on the card. The response is then always application/zip, even for one card.</param>
+        /// <param name="image">The image file to analyze</param>
+        /// <returns>One card: the processed image as image/jpeg or image/png (per outputFormat), with its pixel size in the X-CardMagic-Width and X-CardMagic-Height headers. Two or more cards: application/zip containing card_0.&lt;ext&gt;, card_1.&lt;ext&gt;, ... in reading order. With corners=true the response is always application/zip, even for one card, and each card_N.&lt;ext&gt; is followed by card_N_top-left.&lt;ext&gt;, card_N_top-right.&lt;ext&gt;, card_N_bottom-right.&lt;ext&gt;, card_N_bottom-left.&lt;ext&gt; and card_N_corners.&lt;ext&gt; (all four on one sheet).</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<FileResponse> ProcessCardImageAsync(Mode? mode = null, double? paddingPercent = null, string paddingFill = null, AutoLevels? autoLevels = null, OutputFormat? outputFormat = null, int? longEdge = null, Corners? corners = null, FileParameter image = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    var boundary_ = System.Guid.NewGuid().ToString();
+                    var content_ = new System.Net.Http.MultipartFormDataContent(boundary_);
+                    content_.Headers.Remove("Content-Type");
+                    content_.Headers.TryAddWithoutValidation("Content-Type", "multipart/form-data; boundary=" + boundary_);
+
+                    if (image == null)
+                        throw new System.ArgumentNullException("image");
+                    else
+                    {
+                        var content_image_ = new System.Net.Http.StreamContent(image.Data);
+                        if (!string.IsNullOrEmpty(image.ContentType))
+                            content_image_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse(image.ContentType);
+                        content_.Add(content_image_, "image", image.FileName ?? "image");
+                    }
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("image/jpeg"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "v1/cardmagic/process"
+                    urlBuilder_.Append("v1/cardmagic/process");
+                    urlBuilder_.Append('?');
+                    if (mode != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("mode")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(mode, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (paddingPercent != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("paddingPercent")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(paddingPercent, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (paddingFill != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("paddingFill")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(paddingFill, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (autoLevels != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("autoLevels")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(autoLevels, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (outputFormat != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("outputFormat")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(outputFormat, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (longEdge != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("longEdge")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(longEdge, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    if (corners != null)
+                    {
+                        urlBuilder_.Append(System.Uri.EscapeDataString("corners")).Append('=').Append(System.Uri.EscapeDataString(ConvertToString(corners, System.Globalization.CultureInfo.InvariantCulture))).Append('&');
+                    }
+                    urlBuilder_.Length--;
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200 || status_ == 206)
+                        {
+                            var responseStream_ = response_.Content == null ? System.IO.Stream.Null : await response_.Content.ReadAsStreamAsync().ConfigureAwait(false);
+                            var fileResponse_ = new FileResponse(status_, headers_, responseStream_, null, response_);
+                            disposeClient_ = false; disposeResponse_ = false; // response and client are disposed by FileResponse
+                            return fileResponse_;
+                        }
+                        else
+                        if (status_ == 400)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 401)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 408)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 422)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 429)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 500)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new ApiException<ErrorResponse>("Default Response", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        if (status_ == 503)
                         {
                             var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
@@ -19435,10 +19652,24 @@ namespace CardSightAI.Generated
         public string RequestId { get; set; }
 
         /// <summary>
-        /// Array of card detections from the image. Multiple cards may be detected in a single image. Each detection may include grading data if the card is inside a graded slab. Empty if no cards found.
+        /// Array of card detections from the image. Multiple cards may be detected in a single image. Each detection may include grading data if the card is inside a graded slab; a slabbed card that could not be identified is still returned, with an empty `card` and its `grading`. Empty if no cards found.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("detections", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.Collections.Generic.ICollection<IdentificationDataInput> Detections { get; set; }
+
+        /// <summary>
+        /// Number of cards found in the image, whether or not they were identified. Never less than `identifiedCount`; `detectedCount - identifiedCount` is how many cards were found but not identified. Present on unsuccessful identifications too, so a caller can tell "no card in the image" (0) from "a card was found but not identified". Omitted when the count is unavailable.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("detectedCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [System.ComponentModel.DataAnnotations.Range(0D, 9007199254740991D)]
+        public long DetectedCount { get; set; }
+
+        /// <summary>
+        /// Number of entries in `detections` whose `card` was matched to the catalog (an exact card or a set-level match). Detections with an empty `card`, such as an unidentified card inside a graded slab, are not counted. 0 when no card was identified.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("identifiedCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [System.ComponentModel.DataAnnotations.Range(0D, 9007199254740991D)]
+        public long IdentifiedCount { get; set; }
 
         /// <summary>
         /// Total processing time in milliseconds for AI analysis and catalog matching
@@ -19783,6 +20014,12 @@ namespace CardSightAI.Generated
         /// </summary>
         [Newtonsoft.Json.JsonProperty("autoGrade", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public SlabAutoGradeInput AutoGrade { get; set; }
+
+        /// <summary>
+        /// Certification number read from the slab label. Absent when it could not be read.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("certNumber", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string CertNumber { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -20769,6 +21006,12 @@ namespace CardSightAI.Generated
         public string VariationOf { get; set; }
 
         /// <summary>
+        /// UUIDs of the cards that are variations of this card (each carries this card's UUID in `variationOf`). Omitted when the card has no variations.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("variations", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Variations { get; set; }
+
+        /// <summary>
         /// Simplified list of parallel variants for this card. Includes id, name, and numberedTo.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("parallels", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
@@ -20893,6 +21136,12 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("variationOf", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
         public string VariationOf { get; set; }
+
+        /// <summary>
+        /// UUIDs of the cards that are variations of this card (each carries this card's UUID in `variationOf`). Omitted when the card has no variations.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("variations", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Variations { get; set; }
 
         /// <summary>
         /// Key-value field properties inherited from segment, release, set, and card levels (e.g., HP, Rarity, Artist). Additive — duplicate keys across levels are preserved. Omitted when no fields apply anywhere in the lineage.
@@ -21552,6 +21801,12 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("variationOf", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
         public string VariationOf { get; set; }
+
+        /// <summary>
+        /// UUIDs of the cards that are variations of this card (each carries this card's UUID in `variationOf`). Omitted when the card has no variations.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("variations", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Variations { get; set; }
 
         /// <summary>
         /// Key-value field properties inherited from segment, release, set, and card levels (e.g., HP, Rarity, Artist). Additive — duplicate keys across levels are preserved. Omitted when no fields apply anywhere in the lineage.
@@ -22320,6 +22575,12 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("variationOf", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
         public string VariationOf { get; set; }
+
+        /// <summary>
+        /// UUIDs of the cards that are variations of this card (each carries this card's UUID in `variationOf`). Omitted when the card has no variations.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("variations", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Variations { get; set; }
 
         /// <summary>
         /// Simplified list of parallel variants for this card. Includes id, name, and numberedTo.
@@ -26883,10 +27144,24 @@ namespace CardSightAI.Generated
         public string RequestId { get; set; }
 
         /// <summary>
-        /// Array of card detections from the image. Multiple cards may be detected in a single image. Each detection may include grading data if the card is inside a graded slab. Empty if no cards found.
+        /// Array of card detections from the image. Multiple cards may be detected in a single image. Each detection may include grading data if the card is inside a graded slab; a slabbed card that could not be identified is still returned, with an empty `card` and its `grading`. Empty if no cards found.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("detections", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.Collections.Generic.ICollection<IdentificationData> Detections { get; set; }
+
+        /// <summary>
+        /// Number of cards found in the image, whether or not they were identified. Never less than `identifiedCount`; `detectedCount - identifiedCount` is how many cards were found but not identified. Present on unsuccessful identifications too, so a caller can tell "no card in the image" (0) from "a card was found but not identified". Omitted when the count is unavailable.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("detectedCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [System.ComponentModel.DataAnnotations.Range(0D, 9007199254740991D)]
+        public long DetectedCount { get; set; }
+
+        /// <summary>
+        /// Number of entries in `detections` whose `card` was matched to the catalog (an exact card or a set-level match). Detections with an empty `card`, such as an unidentified card inside a graded slab, are not counted. 0 when no card was identified.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("identifiedCount", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [System.ComponentModel.DataAnnotations.Range(0D, 9007199254740991D)]
+        public long IdentifiedCount { get; set; }
 
         /// <summary>
         /// Total processing time in milliseconds for AI analysis and catalog matching
@@ -27150,6 +27425,12 @@ namespace CardSightAI.Generated
         /// </summary>
         [Newtonsoft.Json.JsonProperty("autoGrade", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public SlabAutoGrade AutoGrade { get; set; }
+
+        /// <summary>
+        /// Certification number read from the slab label. Absent when it could not be read.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("certNumber", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string CertNumber { get; set; }
 
     }
 
@@ -27947,6 +28228,12 @@ namespace CardSightAI.Generated
         public string VariationOf { get; set; }
 
         /// <summary>
+        /// UUIDs of the cards that are variations of this card (each carries this card's UUID in `variationOf`). Omitted when the card has no variations.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("variations", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Variations { get; set; }
+
+        /// <summary>
         /// Simplified list of parallel variants for this card. Includes id, name, and numberedTo.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("parallels", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
@@ -28062,6 +28349,12 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("variationOf", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
         public string VariationOf { get; set; }
+
+        /// <summary>
+        /// UUIDs of the cards that are variations of this card (each carries this card's UUID in `variationOf`). Omitted when the card has no variations.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("variations", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Variations { get; set; }
 
         /// <summary>
         /// Key-value field properties inherited from segment, release, set, and card levels (e.g., HP, Rarity, Artist). Additive — duplicate keys across levels are preserved. Omitted when no fields apply anywhere in the lineage.
@@ -28631,6 +28924,12 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("variationOf", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
         public string VariationOf { get; set; }
+
+        /// <summary>
+        /// UUIDs of the cards that are variations of this card (each carries this card's UUID in `variationOf`). Omitted when the card has no variations.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("variations", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Variations { get; set; }
 
         /// <summary>
         /// Key-value field properties inherited from segment, release, set, and card levels (e.g., HP, Rarity, Artist). Additive — duplicate keys across levels are preserved. Omitted when no fields apply anywhere in the lineage.
@@ -29237,6 +29536,12 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("variationOf", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [System.ComponentModel.DataAnnotations.RegularExpression(@"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
         public string VariationOf { get; set; }
+
+        /// <summary>
+        /// UUIDs of the cards that are variations of this card (each carries this card's UUID in `variationOf`). Omitted when the card has no variations.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("variations", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Variations { get; set; }
 
         /// <summary>
         /// Simplified list of parallel variants for this card. Includes id, name, and numberedTo.
@@ -31401,6 +31706,54 @@ namespace CardSightAI.Generated
         [Newtonsoft.Json.JsonProperty("grading_companies", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required]
         public System.Collections.Generic.ICollection<ReleaseGradingCompanyPopulation> Grading_companies { get; set; } = new System.Collections.ObjectModel.Collection<ReleaseGradingCompanyPopulation>();
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum Mode
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"process")]
+        Process = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"crop")]
+        Crop = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum AutoLevels
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"true")]
+        True = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"false")]
+        False = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum OutputFormat
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"jpeg")]
+        Jpeg = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"png")]
+        Png = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum Corners
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"true")]
+        True = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"false")]
+        False = 1,
 
     }
 
